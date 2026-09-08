@@ -1,0 +1,6 @@
+{
+  "name": "StyleDrop",
+  "description": "Your AI Wardrobe Stylist",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

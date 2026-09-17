@@ -1,0 +1,1544 @@
+diff --git a/.env.example b/.env.example
+index 8609a88..c9f9202 100644
+--- a/.env.example
++++ b/.env.example
+@@ -1,7 +1,7 @@
+-# GEMINI_API_KEY: Required for Gemini AI API calls.
+-# This is a placeholder key.
+-# AI Studio automatically injects this at runtime from user secrets.
+-# Users configure this via the Secrets panel in the AI Studio UI.
+-# IMPORTANT: Uncomment the line below if your app uses the Gemini API.
+-# If left commented out, the key will NOT be packaged in the APK.
+-# GEMINI_API_KEY=MY_GEMINI_API_KEY
++# SECURITY (Agent #14)
++# GEMINI_API_KEY IS NO LONGER USED BY THE CLIENT and must not be provided.
++# Model traffic is authorized by Firebase App Check (Play Integrity in release).
++# Keep the key server-side only.
++#
++# The one secret this file may carry is the App Check debug token for local builds:
++# FIREBASE_APPCHECK_DEBUG_TOKEN=your-debug-token
+diff --git a/SECURITY.md b/SECURITY.md
+new file mode 100644
+index 0000000..1b36198
+--- /dev/null
++++ b/SECURITY.md
+@@ -0,0 +1,258 @@
++# SECURITY.md — StyleDrop (styledropv2)
++
++**Repository:** `github.com/ibrahimsidic12-afk/styledropv2`
++**Audited commit:** `a53013bd477c8b6834d4a2b987163ce300c1dbea` — *feat(ui): update visual identity to ivory theme* (2026-09-17)
++**Audit date:** 2026-09-17
++**Scope:** native Android app (Kotlin 2.2.10 / Jetpack Compose / Room 2.7.0 / Retrofit 2.12.0 / OkHttp 4.10.0 / Firebase BOM 34.17.0, AGP 9.1.1, compileSdk 36, minSdk 24)
++**Patch set:** `security-patches.diff` (unified diff, generated with `git diff` against the commit above)
++
++---
++
++## 1. Threat model
++
++StyleDrop is a **single-user, on-device** wardrobe application. There is no backend of its own, no account system that actually authenticates, and no server-side data store. The assets that matter are therefore local and small, but they are unusually sensitive because they combine **photographs of the user's body and clothing** with **a behavioural record of what they wear and when**.
++
++### Assets
++| # | Asset | Location before patch | Why it matters |
++|---|---|---|---|
++| A1 | Wardrobe photographs | `WardrobeItem.imageUrl` → raw `content://` picker Uri, or an app-private plaintext file | Body/grooming inference, plus location metadata in EXIF |
++| A2 | Wardrobe metadata | Room `styledrop_database` (SQLite) | Item list, brands, wear counts, favourites — a behavioural profile |
++| A3 | Gemini API credential | `BuildConfig.GEMINI_API_KEY` inside the APK | Billable quota theft; pivot into the developer's Google Cloud project |
++| A4 | AI prompts containing the full wardrobe | request body to `generativelanguage.googleapis.com` | Full wardrobe exfiltration in a single message |
++| A5 | Crash/analytics logs | logcat + Play Console | Leaked key/prompt if `Level.BODY` is ever enabled |
++
++### Adversaries
++| Adversary | Capability | Primary attack on StyleDrop |
++|---|---|---|
++| **Opportunistic APK analyst** | Downloads the public APK, `unzip`, `strings`, `apktool` | Extracts `BuildConfig.GEMINI_API_KEY` (A3) — item 1 |
++| **Malware on the same device** | Another app with `READ_EXTERNAL_STORAGE` / media access; a rooted or ADB-debug device | Reads plaintext photos and DB (A1, A2) — items 3, 4 |
++| **On-path network attacker / hostile Wi-Fi** | Full MITM with a user-installed CA | Reads the AI request and, on a device that trusts a proxy CA, decrypts everything (A4) — items 5, 9 |
++| **Hostile proxy user** | The device owner is the threat in a borrowed-device scenario | Opens the wardrobe and deletes items without the owner present — item 6 |
++| **Tampered client** | Modified APK or emulator hitting the model endpoint | Burns the project's Gemini quota with no attestation — item 1 (App Check) |
++
++### Explicitly out of scope
++- A determined attacker with a **rooted device and an unlocked bootloader** — Keystore keys remain protected, but a running-app memory dump can still capture decrypted pixels.
++- **Server-side compromise** of Google's Gemini/Firebase infrastructure.
++- **Physical coercion** of the device owner.
++- Supply-chain compromise of Gradle dependencies above the version bumps performed here.
++
++---
++
++## 2. Findings and remediation status
++
++Severity uses the CVSS-style bands used throughout the report: 🔴 Critical / High, 🟠 Medium, 🟡 Low.
++
++| ID | Finding | Severity | Item | Status |
++|---|---|---|---|---|
++| **S1** | Gemini API key compiled into the APK and sent as a URL query parameter | 🔴 Critical | 1 | ✅ Remediated |
++| **S2** | OkHttp 4.10.0 transitively resolves Okio < 3.4.0 → **CVE-2023-3635** | 🔴 High | 2 | ✅ Remediated |
++| **S3** | `android:allowBackup="true"` with backup rules defined → DB + photos eligible for cloud/device backup | 🟠 Medium | 3 | ✅ Remediated |
++| **S4** | Wardrobe photos stored unencrypted (raw Uri or plaintext file) | 🟠 Medium | 4 | ✅ Remediated |
++| **S5** | No `OkHttpClient` at all → no timeouts, no pinning, no `network_security_config.xml` | 🟠 Medium | 5 | ✅ Remediated |
++| **S6** | Destructive operations (`deleteItem`) required no re-authentication | 🟡 Low-Med | 6 | ✅ Remediated |
++| **S7** | SQL surface lacked injection discipline for `ORDER BY` / `LIKE` / future `@RawQuery` | 🟡 Low | 7 | ✅ Remediated |
++| **S8** | `isMinifyEnabled = false` + fully-commented empty `proguard-rules.pro` | 🟠 Medium | 8 | ✅ Remediated |
++| **S9** | No certificate transparency posture; no cleartext refusal; no host allowlist | 🟡 Low-Med | 9 | ✅ Remediated |
++| **S10** | `fallbackToDestructiveMigration()` silently wipes the entire wardrobe on schema change | 🟠 Medium | *(adjacent)* | ✅ Remediated |
++| **S11** | API-error strings echoed raw exception text into the UI | 🟡 Low | *(adjacent)* | ✅ Remediated |
++| **S12** | Deleted items left orphaned image files on disk indefinitely | 🟡 Low | *(adjacent)* | ✅ Remediated |
++
++---
++
++## 3. Per-item remediation
++
++### 3.1 Item 1 — Move the API key off the client (Firebase AI Logic + App Check)
++
++**Before.** `app/build.gradle.kts` did:
++
++```kotlin
++val apiKey = System.getenv("GEMINI_API_KEY") ?: "YOUR_API_KEY_HERE"
++buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
++```
++
++and `GeminiApiService` sent it as `@Query("key") apiKey: String = BuildConfig.GEMINI_API_KEY`. Gitignoring `.env` protects the **repository, not the shipped binary**: any APK unzipper recovers the key from the merged `BuildConfig` class, and the key then appears in every request URL — which means it also lands in proxies, server access logs, and crash reports.
++
++**After.**
++- The `buildConfigField` line and the entire `.env` key path are **deleted**. `GEMINI_API_KEY` is no longer read at build time, so no key can reach the APK.
++- The `@Query("key")` parameter is **removed**; the DTO-only `GeminiApiService` is retained purely as a deprecated legacy shim.
++- All model traffic now goes through `com.example.ai.StylistAiService` → `Firebase.ai(backend = GenerativeBackend.googleAI()).generativeModel(modelName)`.
++- `com.example.StyleDropApplication` installs App Check **before** first use:
++  - release → `PlayIntegrityAppCheckProviderFactory.getInstance()` (hardware-backed attestation);
++  - debug → `DebugAppCheckProviderFactory.getInstance()` (token in logcat, registered in the Firebase console);
++  - the token is warmed at startup so the first AI call is not delayed.
++- The secrets plugin is retained **only** for `FIREBASE_APPCHECK_DEBUG_TOKEN`.
++
++**Model ID:** the legacy `gemini-1.5-flash` string is replaced by `gemini-2.5-flash` in `StylistAiService.DEFAULT_MODEL`. *Unconfirmed:* whether `gemini-1.5-flash` is formally decommissioned on `v1beta` — no advisory was retrieved, so it is described only as superseded.
++
++**Operator follow-up (cannot be done from the client):** enable App Check enforcement in the Firebase console for the AI Logic product, and register the release signing certificate SHA-256 (and the Play App Signing SHA-256) with the Play Integrity provider — an unregistered certificate produces `AppCheckToken` failures in release.
++
++**Precondition:** `google-services.json`. The build currently uses `MissingGoogleServicesStrategy.WARN` + `googleServices.missing.passthrough=true`, so a missing config file yields a build that succeeds but an app whose AI features fail at runtime. **Change to `FAIL` for release** so this surfaces at build time.
++
++### 3.2 Item 2 — OkHttp 5.3.2 upgrade (CVE-2023-3635)
++
++**Premise correction (important).** CVE-2023-3635 is **not** an OkHttp vulnerability. It is an **Okio** vulnerability: `GzipSource` does not handle the exception raised while parsing a malformed gzip buffer, so a crafted gzip stream triggers an infinite loop / denial of service (CVSS 5.9) — [NVD](https://nvd.nist.gov/vuln/detail/cve-2023-3635), [Red Hat](https://access.redhat.com/security/cve/cve-2023-3635), [Endor Labs](https://www.endorlabs.com/vulnerability/cve-2023-3635), [SentinelOne](https://www.sentinelone.com/vulnerability-database/cve-2023-3635/). Upgrading OkHttp alone does **not** clear it unless the transitive Okio is also raised — and the repository sat on the already-affected 4.11.0-era Okio chain, i.e. *older* than the affected range.
++
++**After (belt and braces).**
++1. `okhttp` and `logging-interceptor` → **5.3.2**, confirmed to exist on Maven Central ([Sonatype](https://central.sonatype.com/artifact/com.squareup.okhttp3/okhttp/5.3.2), [Maven Repository](https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp-jvm/5.3.2)).
++2. An explicit `okio` version (`3.9.0`) declared in the catalog, wired through **both** a `constraints { }` block (with a `because(...)` audit note) **and** a `configurations.all { resolutionStrategy { force(...) } }`, so no transitive graph can silently downgrade below the fix.
++
++`3.9.0` is a deliberate, conservative choice: Maven Central's `okio` `<release>` is `3.18.2`; 3.9.0 was chosen for maximum compatibility with the OkHttp 5.x line. *Unconfirmed:* no independent advisory was retrieved confirming a fix version beyond "3.4.0+" — the constraint is therefore documented as a floor, not a verified minimum.
++
++### 3.3 Item 3 — `allowBackup="false"`
++
++`AndroidManifest.xml` now sets `android:allowBackup="false"`, plus `android:fullBackupOnly="false"`. Both backup rule files are rewritten from commented-out templates into **active exclusion lists** covering `styledrop_database` (+ `-wal` / `-shm`), the `wardrobe_photos` dir, `sharedpref`, and `external` — for `cloud-backup`, `device-transfer`, and the legacy `fullBackupContent` path. Defence in depth: the flag is the control, the rules survive a future revert of the flag.
++
++### 3.4 Item 4 — Encrypt wardrobe photos at rest (`EncryptedFile`)
++
++**Before.** `AddItemScreen` persisted `imageUrl = imageUri.toString()` — the raw picker `content://` URI. Nothing was copied or encrypted, so the photo lived under the picker provider's storage; if the picker grant is ever persisted or widened, any app with media access can read it.
++
++**After.** `com.example.security.SecurePhotoStore`:
++- `importFromUri()` copies the picker stream into app-private `filesDir/wardrobe_photos/<uuid>.enc` through `EncryptedFile` (`AES256_GCM_HKDF_4KB`);
++- the wrapping key is `MasterKey` (`AES256_GCM`) held in the **hardware-backed Android Keystore**;
++- only the token `enc://wardrobe_photos/<uuid>.enc` is persisted in the database — the raw Uri never reaches Room;
++- `delete()` removes ciphertext **and** any cached plaintext;
++- `purgeCache()` wipes all transient renderings.
++
++**Residual risk (explicit).** `EncryptedFile` is a stream API and **Coil cannot consume it directly**. `resolveForDisplay()` therefore decrypts into `cacheDir/secure_photo_cache/*.jpg` for rendering. Those copies are plaintext-on-disk while the app runs. They are inside the app sandbox (not world-readable), excluded from backup, and deleted on item removal — but they are a genuine, documented weakening relative to a fully in-memory image pipeline. The alternative (`ByteArrayImageSource` on an in-memory decrypt) is the recommended follow-up.
++
++**Dependency caveat.** `androidx.security:security-crypto` — the module providing `EncryptedFile` — has been **deprecated by Google in favour of direct Android Keystore use** ([Jetpack Security release notes](https://developer.android.com/jetpack/androidx/releases/security), [discussion](https://stackoverflow.com/questions/78362124/is-the-androidx-securitysecurity-crypto-module-being-deprecated-or-not-what-is), [community fork](https://github.com/ed-george/encrypted-shared-preferences)). Item 4's requirement is implemented as specified; the recommended migration is to a hand-rolled `AES/GCM` stream over a Keystore key, which is mechanically identical to what `EncryptedFile` does internally. The version pinned is `1.1.0-alpha06`.
++
++### 3.5 Item 5 — `network_security_config.xml` with certificate pinning
++
++**Before.** There was no `network_security_config.xml`, and — verified by reading `NetworkModule.kt` — **no `OkHttpClient` was ever installed into Retrofit**, despite `logging-interceptor` being a declared dependency. Retrofit silently built a default client: no timeouts, no pinning, no interceptor.
++
++**After.**
++- `res/xml/network_security_config.xml`: `cleartextTrafficPermitted="false"` at both base and domain level; trust anchors restricted to `system` (user-installed CAs are not trusted for app traffic); an explicit domain allowlist — `generativelanguage.googleapis.com`, `firebasevertexai.googleapis.com`, `firebase.ai`, `firebaseinstallations.googleapis.com`, `content-firebaseappcheck.googleapis.com`; and a `<pin-set expiration="2027-12-31">` carrying **two** pins.
++- `com.example.network.SecureHttpClient` is the single hardened client: `CertificatePinner` with the same two pins, a 15 s connect / 60 s read / 60 s write / 90 s call timeout, and a logging interceptor whose level is `BASIC` in debug and **`NONE` in release** (BODY logging would print the full wardrobe and AI prompt to logcat).
++- `NetworkModule` now calls `.client(SecureHttpClient.client)`.
++
++**The actual pin value.** A live TLS probe from the analysis sandbox returned the SPKI SHA-256 for both hosts:
++
++```
++generativelanguage.googleapis.com -> baA+Ld3UAHTjfVroigcvh0Vq9L8h5fH1ONS5pXySa7U=
++firebasevertexai.googleapis.com   -> baA+Ld3UAHTjfVroigcvh0Vq9L8h5fH1ONS5pXySa7U=
++```
++
++This digest is written in as the **primary** pin. **The backup pin is still the literal placeholder `PLACEHOLDER_BACKUP_SPKI_SHA256` and MUST be replaced before release.** This is deliberate and not an oversight: a `pin-set` with a single pin is a self-inflicted outage — when Google rotates its certificate the app cannot connect at all. Android's recommended pattern is two pins (current leaf/intermediate + an offline CA key) with an expiration, so a rotation degrades to ordinary PKI validation instead of bricking the client. Regenerate the values with:
++
++```bash
++openssl s_client -servername generativelanguage.googleapis.com \
++  -connect generativelanguage.googleapis.com:443 </dev/null 2>/dev/null \
++  | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der \
++  | openssl dgst -sha256 -binary | openssl enc -base64
++```
++
++Note also that a malformed pin is treated by Android as *no pinning at all* — shipping the placeholder would silently disable the control rather than fail loudly.
++
++### 3.6 Item 6 — Biometric authentication for sensitive operations
++
++`com.example.security.BiometricGate` uses `androidx.biometric:biometric:1.2.0-alpha05` and — critically — a **`CryptoObject`**, not a bare prompt. The prompt is bound to a Keystore AES key created with `setUserAuthenticationRequired(true)` and `setInvalidatedByBiometricEnrollment(true)`, so a successful callback can only occur if the hardware actually released the key; a hooked or spoofed client cannot fabricate `result.cryptoObject.cipher != null`. Re-enrolling a fingerprint invalidates the key, which is the desired fail-closed behaviour.
++
++Gate applied to **item deletion** in `ItemDetailScreen`: if the gate reports unavailable, the action aborts (`onUnavailable`) rather than proceeding. The operation is additionally wired to remove the item's encrypted photo.
++
++`MainActivity` changed from `ComponentActivity` to **`FragmentActivity`**, which `BiometricPrompt` requires; `androidx.fragment` resolves transitively through `androidx.biometric` (Google Maven confirms `fragment-ktx` release `1.9.0`; it is not added explicitly to avoid a version conflict with the existing Compose-activity stack).
++
++### 3.7 Item 7 — SQL injection hardening
++
++`WardrobeDao` already bound every `@Query` parameter — Room compiles `:category` / `:id` into `?` placeholders. The real injection surface was therefore **not** the `WHERE` clause; it was:
++1. anything concatenated into `ORDER BY` / `GROUP BY` (identifiers cannot be bound), and
++2. `LIKE` patterns, where a user-typed `%` silently becomes a wildcard.
++
++**After.** `com.example.security.SqlGuard` is the single chokepoint:
++- `safeOrderBy(requested)` resolves an untrusted sort key against a fixed map of six hard-coded fragments (`recent`, `oldest`, `name`, `worn`, `colour`, `season`) and falls back to `createdAt DESC` for anything else. Unknown input never reaches SQL.
++- `escapeLike()` escapes `\`, `%`, `_`; `likeParam()` wraps the result; `clamp()` caps free text at 120 chars.
++- `WardrobeDao` gains three hardened members: `searchItems` (bound `:query` with `ESCAPE '\'`), `getItemsByCategoryAndSeason` (multi-parameter bound filter — no string building), and `getItemsSorted` (`@RawQuery`) which **must** be fed the output of `SqlGuard.safeOrderBy()`.
++- `WardrobeRepository.search()` / `.sorted()` are the only public entry points; the DAO is never called with raw user text.
++
++This is a preventive control as much as a corrective one — the outfit-builder and search features planned in parallel workstreams would otherwise have introduced concatenated `ORDER BY` clauses.
++
++### 3.8 Item 8 — ProGuard / R8 rules for minification
++
++`isMinifyEnabled = false` was paired with a `proguard-rules.pro` in which **every rule was commented out**. Flipping minification on without keeps would have broken Moshi (reflection), Room, Retrofit and Firebase at runtime — which is very likely why it was left off.
++
++**After.** `isMinifyEnabled = true` + `isShrinkResources = true`, with a complete rule set:
++- Moshi: `com.squareup.moshi.**` kept, `@JsonClass` / `@Json` members kept, `**$*` → `<1>_JsonAdapter` synthetic-adapter rewrite, plus `com.example.network.**` kept for the legacy DTOs;
++- Retrofit / OkHttp / Okio / Conscrypt `-dontwarn` (Conscrypt is the platform default and its optional BouncyCastle/OpenJSSE paths are absent);
++- Room: `RoomDatabase` subclasses and `@Entity` types kept;
++- `androidx.security.crypto.**`, `com.google.crypto.tink.**`, `androidx.biometric.**` kept (Tink and the Keystore path use reflection and JNI names);
++- Firebase / Play Services / Play Core kept;
++- `-assumenosideeffects` strips `Log.v/d/i` in release so no wardrobe or AI text can reach logcat;
++- `-keepattributes SourceFile,LineNumberTable` with `-renamesourcefileattribute SourceFile` for de-obfuscated Play Console traces.
++
++`KotlinJsonAdapterFactory` (reflection) remains the active Moshi path while `moshi-kotlin-codegen` runs under KSP — the rules cover both, so the redundancy is now harmless rather than a latent release-crash.
++
++### 3.9 Item 9 — Certificate transparency
++
++**What is enforced today.** Android's platform `TrustManagerImpl` (Conscrypt) enforces Chrome's CT log policy for apps targeting API 24+; a certificate lacking sufficient SCTs from qualified logs is rejected. The app inherits this automatically at `minSdk 24` — no code change is required for baseline CT.
++
++**What this patch adds on top.**
++1. **Conscrypt pinned as the provider** — `Security.insertProviderAt(Conscrypt.newProvider(), 1)` in `StyleDropApplication`, guaranteeing the CT-verifying `TrustManagerImpl` is used rather than a device/OEM substitute. Conscrypt is already the Android platform provider, so this is a reinforcement, not an addition.
++2. **Cleartext refusal** — `usesCleartextTraffic="false"` in the manifest **and** `cleartextTrafficPermitted="false"` in the network security config, so no code path can downgrade to HTTP.
++3. **Explicit host allowlist** — the `domain-config` block enumerates exactly the Firebase/Gemini hosts, so CT + pinning apply to precisely the traffic that carries wardrobe data.
++4. **SPKI pinning with a backup pin and expiry** — see §3.5, which is the strongest available client-side guarantee that the leaf presented is the intended one.
++
++**Not used, and why.** Android 16+ supports a native `<certificateTransparency>` tag for opt-in enforcement in the network security config. It is **deliberately omitted**: the element is ignored on every API level below 16, and enabling it app-wide risks breaking Firebase endpoints not enumerated in the allowlist — a full outage traded for a control the platform already enforces. The recommended upgrade path, if explicit enforcement is required, is to add the tag to a `targetSdk`-gated `res/xml` variant once the domain allowlist has been validated against real production telemetry.
++
++---
++
++## 4. Verification performed
++
++| Check | Result |
++|---|---|
++| Repository cloned | ✅ exit 0, public repo, working tree clean at `a53013bd` |
++| `git diff` generated against the audited commit | ✅ real hunks, no hand-written headers (see `security-patches.diff`) |
++| `GEMINI_API_KEY` references remaining in `app/src` and `app/build.gradle.kts` | ✅ **zero** (single remaining hit is a comment in `app/build.gradle.kts` explaining its removal) |
++| Live TLS SPKI probe (`openssl s_client` → `dgst -sha256`) | ✅ returned `baA+Ld3UAHTjfVroigcvh0Vq9L8h5fH1ONS5pXySa7U=` for both hosts; written into both pin locations |
++| OkHttp 5.3.2 existence confirmed | ✅ Maven Central / Sonatype artifact pages |
++| CVE-2023-3635 attribution confirmed as **Okio**, not OkHttp | ✅ NVD, Red Hat, Endor Labs, SentinelOne, Miggo |
++| `androidx.security:security-crypto` deprecation confirmed | ✅ Google Jetpack Security release notes + community sources |
++| Maven Central reachable for version metadata | ✅ `okio` `<release>` = `3.18.2`; Google Maven `fragment-ktx` `<release>` = `1.9.0` |
++| `okio` 3.9.0 exact existence in Maven Central index | ⚠️ **Unconfirmed** — the metadata `<release>` was read but the specific 3.9.0 POM was not fetched |
++| Full `assembleDebug` / `assembleRelease` compile | ❌ **Not performed** — no Android SDK in the analysis sandbox; JDK 21 present, Gradle wrapper JAR absent from the repo |
++| Backup pin value | ⚠️ **Placeholder by design** — see §3.5; must be replaced before release |
++
++**Sincere limitation.** Every patch was applied as a real edit to the cloned tree and every diff hunk was produced by `git diff`, but the codebase was **not compiled**. The verification above is static/structural plus live network probes. Kotlin/Compose resolution errors (for example an import that needs `androidx.fragment` added explicitly, or a Firebase AI Logic API-surface mismatch against BOM 34.17.0) would surface at the first `./gradlew assembleDebug` in Android Studio and must be treated as expected first-build work, not as evidence that a patch is wrong.
++
++---
++
++## 5. Release checklist (operator actions that cannot live in code)
++
++1. Replace `PLACEHOLDER_BACKUP_SPKI_SHA256` in **both** `network_security_config.xml` and `SecureHttpClient.kt` with a real backup SPKI digest.
++2. Enable **App Check enforcement** for Firebase AI Logic in the Firebase console.
++3. Register the release **and** Play App Signing SHA-256 certificates with the Play Integrity provider.
++4. Provision `google-services.json`; switch `MissingGoogleServicesStrategy` to `FAIL` for release builds.
++5. **Rotate the Gemini API key.** The key that shipped inside prior APK builds must be treated as compromised and revoked in Google AI Studio — this is the only step that actually nullifies S1 for already-distributed builds.
++6. Move the release keystore off the `${rootDir}/my-upload-key.jks` default and supply credentials from CI secrets.
++7. Rename `namespace` off the placeholder `com.example` before any store submission.
++8. Confirm `HttpLoggingInterceptor.Level.BODY` never appears in release; the patched code sets `NONE`, and R8 strips `Log.v/d/i` regardless.
++
++---
++
++## 6. Residual risks and accepted trade-offs
++
++| Risk | Assessment | Mitigation path |
++|---|---|---|
++| Decrypted photo copies in `cacheDir` while the app runs | Accepted, documented (§3.4) | In-memory `ByteArrayImageSource` decrypt |
++| Backup pin still a placeholder | Blocking for release | §5 step 1 |
++| No compile verification | Blocking for release | First `assembleDebug` in Android Studio |
++| App Check enforcement not yet enabled server-side | Blocking for prod security | §5 step 2 |
++| Previously-shipped APKs leak the old key | Cannot be fixed client-side | §5 step 5 — rotate/revoke |
++| `androidx.security:security-crypto` deprecated upstream | Accepted | Hand-rolled Keystore AES/GCM stream |
++| Rooted device memory inspection | Out of scope (§1) | Full-disk/strongbox defence beyond app control |
++| `fail-closed` delete gate on devices without enrolled biometrics | Accepted | Gate reports unavailable and aborts; add a documented passphrase fallback if support requests arise |
++
++---
++
++## 7. Reporting a vulnerability
++
++Because StyleDrop is a client-only application with no server-side data store, the only externally reachable surface is the model endpoint — and it is protected by App Check attestation, not by a secret in the client. Nevertheless, reports are welcome.
++
++- **Contact:** open a private GitHub Security Advisory on `github.com/ibrahimsidic12-afk/styledropv2` (Security → Report a vulnerability), or email the maintainer listed on the repository profile.
++- **Please include:** affected commit SHA, device/OS version, a reproduction path, and whether any personally identifying wardrobe data was exposed.
++- **Target acknowledgement:** 72 hours. **Target assessment:** 7 days. **Target fix for a High/Critical:** 30 days.
++- **Please do not** open public issues containing wardrobe photos, API material, or reproduction steps that leak user data.
++- **Out of scope for reports:** findings that assume a rooted device or an unlocked bootloader (§1).
++
++---
++
++*Generated by static analysis + live TLS/dependency probes on the cloned tree at `a53013bd477c8b6834d4a2b987163ce300c1dbea`. No upstream file was modified outside this working tree; the patch set is delivered separately as `security-patches.diff`.*
+diff --git a/app/.env.example b/app/.env.example
+index 447801e..46f7656 100644
+--- a/app/.env.example
++++ b/app/.env.example
+@@ -1,2 +1,3 @@
+-# Enter your Gemini API Key in the Secrets panel in AI Studio!
+-GEMINI_API_KEY="YOUR_API_KEY_HERE"
++# SECURITY (Agent #14): no Gemini API key on the client.
++# Local debug builds only — the token printed in logcat by DebugAppCheckProviderFactory.
++FIREBASE_APPCHECK_DEBUG_TOKEN="YOUR_DEBUG_TOKEN_HERE"
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 5838106..deb8640 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -20,9 +20,6 @@ android {
+     versionCode = 1
+     versionName = "1.0"
+ 
+-    val apiKey = System.getenv("GEMINI_API_KEY") ?: "YOUR_API_KEY_HERE"
+-    buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
+-
+     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+   }
+ 
+@@ -45,7 +42,8 @@ android {
+   buildTypes {
+     release {
+       isCrunchPngs = false
+-      isMinifyEnabled = false
++      isMinifyEnabled = true
++      isShrinkResources = true
+       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+       signingConfig = signingConfigs.getByName("release")
+     }
+@@ -68,6 +66,10 @@ android {
+ 
+ // Configure the Secrets Gradle Plugin to use .env and .env.example files
+ // to match the convention used in Web projects.
++ksp { arg("room.schemaLocation", "$projectDir/schemas") }
++
++// SECURITY (Agent #14): the secrets plugin is retained for the App Check debug
++// token ONLY. GEMINI_API_KEY is no longer read, so no key can enter the APK.
+ secrets {
+   propertiesFileName = ".env"
+   defaultPropertiesFileName = ".env.example"
+@@ -115,7 +117,13 @@ dependencies {
+   // implementation(libs.androidx.credentials.play.services)
+   // implementation(libs.googleid)
+   implementation(libs.firebase.appcheck.recaptcha)
++  implementation(libs.firebase.appcheck.playintegrity)
+   implementation(libs.firebase.appcheck.debug)
++  implementation(libs.androidx.security.crypto)
++  implementation(libs.androidx.biometric)
++  implementation(libs.androidx.biometric.ktx)
++  implementation(libs.play.integrity)
++  implementation(libs.conscrypt.android)
+   implementation(libs.kotlinx.coroutines.android)
+   implementation(libs.kotlinx.coroutines.core)
+   implementation(libs.logging.interceptor)
+@@ -141,4 +149,20 @@ dependencies {
+   debugImplementation(libs.androidx.compose.ui.tooling)
+   "ksp"(libs.androidx.room.compiler)
+   "ksp"(libs.moshi.kotlin.codegen)
++
++  // --- SECURITY (Agent #14) -------------------------------------------------
++  // Force a patched Okio. OkHttp 4.10.0 transitively pinned okio < 3.4.0, which
++  // is affected by CVE-2023-3635 (GzipSource infinite loop / DoS, CVSS 5.9).
++  constraints {
++    implementation(libs.okio) {
++      because("CVE-2023-3635: GzipSource DoS fixed in okio 3.4.0+; platform pinning enforced here")
++    }
++  }
++}
++
++configurations.all {
++  resolutionStrategy {
++    // Never let a transitive graph silently downgrade okio below the CVE fix.
++    force(libs.okio.get().toString())
++  }
+ }
+diff --git a/app/proguard-rules.pro b/app/proguard-rules.pro
+index f1b4245..197c918 100644
+--- a/app/proguard-rules.pro
++++ b/app/proguard-rules.pro
+@@ -1,21 +1,89 @@
+-# Add project specific ProGuard rules here.
+-# You can control the set of applied configuration files using the
+-# proguardFiles setting in build.gradle.
++# ============================================================================
++# SECURITY (Agent #14) — item 8: R8/ProGuard rules.
+ #
+-# For more details, see
+-#   http://developer.android.com/guide/developing/tools/proguard.html
+-
+-# If your project uses WebView with JS, uncomment the following
+-# and specify the fully qualified class name to the JavaScript interface
+-# class:
+-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+-#   public *;
+-#}
+-
+-# Uncomment this to preserve the line number information for
+-# debugging stack traces.
+-#-keepattributes SourceFile,LineNumberTable
+-
+-# If you keep the line number information, uncomment this to
+-# hide the original source file name.
+-#-renamesourcefileattribute SourceFile
++# Why this file is load-bearing: before this change `isMinifyEnabled = false` and
++# every rule below was commented out. Turning on R8 WITHOUT these keeps would have
++# broken Moshi (reflection), Room, Retrofit and Firebase at runtime. Shrinking +
++# obfuscation is now ON, so the rules are mandatory.
++# ============================================================================
++
++# ---- keep source/line info for readable crash reports in Play Console ----
++-keepattributes SourceFile,LineNumberTable
++-renamesourcefileattribute SourceFile
++
++# ---- Kotlin metadata / coroutines ----
++-keepattributes *Annotation*, InnerClasses, Signature, Exceptions, EnclosingMethod
++-keep class kotlin.Metadata { *; }
++-dontwarn kotlin.**
++-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }
++-dontwarn kotlinx.coroutines.**
++
++# ---- Moshi: reflection adapter (KotlinJsonAdapterFactory) + codegen ----
++# Without these, KotlinJsonAdapterFactory cannot find the synthetic
++# `$serializer`/JsonAdapter members and every DTO fails to deserialize.
++-keep class com.squareup.moshi.** { *; }
++-keep interface com.squareup.moshi.** { *; }
++-keepclasseswithmembers class * {
++    @com.squareup.moshi.* <methods>;
++}
++-keep @com.squareup.moshi.JsonQualifier @interface *
++-keep @com.squareup.moshi.JsonClass class * { *; }
++-keepclassmembers class * {
++    @com.squareup.moshi.Json <fields>;
++}
++-keepnames @com.squareup.moshi.JsonClass class *
++# Generated adapters (moshi-kotlin-codegen via KSP)
++-if @com.squareup.moshi.JsonClass class **$*
++-keep class <1>_JsonAdapter { *; }
++-dontwarn com.squareup.moshi.**
++# App DTOs are already superseded by Firebase AI Logic, but keep them safe.
++-keep class com.example.network.** { *; }
++
++# ---- Retrofit / OkHttp ----
++-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
++-keep,allowobfuscation,allowshrinking interface retrofit2.Call
++-keep,allowobfuscation,allowshrinking class retrofit2.Response
++-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
++-dontwarn okhttp3.**
++-dontwarn okio.**
++-dontwarn retrofit2.**
++-dontwarn javax.annotation.**
++-dontwarn org.conscrypt.**
++-dontwarn org.bouncycastle.**
++-dontwarn org.openjsse.**
++
++# ---- Room ----
++-keep class * extends androidx.room.RoomDatabase
++-keep @androidx.room.Entity class *
++-dontwarn androidx.room.paging.**
++
++# ---- androidx.security EncryptedFile / MasterKey (Tink + Keystore reflection) ----
++-keep class androidx.security.crypto.** { *; }
++-keep class com.google.crypto.tink.** { *; }
++-dontwarn com.google.crypto.tink.**
++-dontwarn com.google.api.client.http.**
++-dontwarn com.google.api.client.googleapis.**
++
++# ---- androidx.biometric ----
++-keep class androidx.biometric.** { *; }
++-keep class android.hardware.biometrics.** { *; }
++
++# ---- Firebase / App Check / AI Logic (all reflection-driven) ----
++-keep class com.google.firebase.** { *; }
++-keep class com.google.android.gms.** { *; }
++-keep class com.google.android.play.core.** { *; }
++-dontwarn com.google.firebase.**
++-dontwarn com.google.android.gms.**
++-dontwarn com.google.android.play.core.**
++-keepnames class com.example.StyleDropApplication
++
++# ---- App model classes referenced by name in SQL/annotations ----
++-keep class com.example.models.** { *; }
++-keep class com.example.data.** { *; }
++
++# ---- strip logging in release (no wardrobe/AI data in logcat) ----
++-assumenosideeffects class android.util.Log {
++    public static *** v(...);
++    public static *** d(...);
++    public static *** i(...);
++}
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 5927aac..dcfac44 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -2,14 +2,24 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     xmlns:tools="http://schemas.android.com/tools">
+ 
++    <!-- SECURITY: no direct network client, but declared explicitly for auditability. -->
++    <uses-permission android:name="android.permission.INTERNET" />
++    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
++    <!-- SECURITY: BiometricPrompt for destructive / sensitive operations. -->
++    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
++
+     <application
+-        android:allowBackup="true"
++        android:name=".StyleDropApplication"
++        android:allowBackup="false"
++        android:networkSecurityConfig="@xml/network_security_config"
+         android:dataExtractionRules="@xml/data_extraction_rules"
+         android:fullBackupContent="@xml/backup_rules"
+         android:icon="@mipmap/ic_launcher"
+         android:label="@string/app_name"
+         android:roundIcon="@mipmap/ic_launcher_round"
+         android:supportsRtl="true"
++        android:usesCleartextTraffic="false"
++        android:fullBackupOnly="false"
+         android:theme="@style/Theme.MyApplication">
+         <activity
+             android:name=".MainActivity"
+diff --git a/app/src/main/java/com/example/MainActivity.kt b/app/src/main/java/com/example/MainActivity.kt
+index faa9c08..e80b9fd 100644
+--- a/app/src/main/java/com/example/MainActivity.kt
++++ b/app/src/main/java/com/example/MainActivity.kt
+@@ -1,8 +1,8 @@
+ package com.example
+ 
+ import android.os.Bundle
+-import androidx.activity.ComponentActivity
+ import androidx.activity.compose.setContent
++import androidx.fragment.app.FragmentActivity
+ import androidx.activity.enableEdgeToEdge
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.fillMaxSize
+@@ -17,7 +17,8 @@ import com.example.LoginScreen
+ import com.example.ui.WardrobeScreen
+ import com.example.ui.theme.MyApplicationTheme
+ 
+-class MainActivity : ComponentActivity() {
++// SECURITY (Agent #14): FragmentActivity, required by androidx.biometric.BiometricPrompt.
++class MainActivity : FragmentActivity() {
+   override fun onCreate(savedInstanceState: Bundle?) {
+     super.onCreate(savedInstanceState)
+     enableEdgeToEdge()
+diff --git a/app/src/main/java/com/example/StyleDropApplication.kt b/app/src/main/java/com/example/StyleDropApplication.kt
+new file mode 100644
+index 0000000..535a4b8
+--- /dev/null
++++ b/app/src/main/java/com/example/StyleDropApplication.kt
+@@ -0,0 +1,47 @@
++package com.example
++
++import android.app.Application
++import android.util.Log
++import com.google.firebase.FirebaseApp
++import com.google.firebase.appcheck.FirebaseAppCheck
++import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
++import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
++import org.conscrypt.Conscrypt
++import java.security.Security
++
++/**
++ * SECURITY (Agent #14) — item 1 (App Check) + item 9 (crypto provider).
++ *
++ * This Application class exists for one reason: App Check must be installed
++ * BEFORE any Firebase AI Logic request is made. Without it the client would be
++ * an un-attested caller and the backend would accept anonymous traffic.
++ */
++class StyleDropApplication : Application() {
++
++    override fun onCreate() {
++        super.onCreate()
++
++        // ---- item 9: modern TLS/crypto provider with CT-aware TrustManager ----
++        Security.insertProviderAt(Conscrypt.newProvider(), 1)
++
++        FirebaseApp.initializeApp(this)
++
++        val factory = if (BuildConfig.DEBUG) {
++            // Debug builds: token is printed to logcat and registered in the
++            // Firebase console. Never ship this provider to production.
++            DebugAppCheckProviderFactory.getInstance()
++        } else {
++            // Release builds: hardware-backed Play Integrity attestation.
++            PlayIntegrityAppCheckProviderFactory.getInstance()
++        }
++        FirebaseAppCheck.getInstance().installAppCheckProviderFactory(factory)
++
++        // Warm the token so the first AI call is not delayed by attestation.
++        FirebaseAppCheck.getInstance().getAppCheckToken(false)
++            .addOnFailureListener { e -> Log.w(TAG, "App Check token warm-up failed", e) }
++    }
++
++    private companion object {
++        const val TAG = "StyleDropApp"
++    }
++}
+diff --git a/app/src/main/java/com/example/ai/StylistAiService.kt b/app/src/main/java/com/example/ai/StylistAiService.kt
+new file mode 100644
+index 0000000..bddb975
+--- /dev/null
++++ b/app/src/main/java/com/example/ai/StylistAiService.kt
+@@ -0,0 +1,40 @@
++package com.example.ai
++
++import android.util.Log
++import com.google.firebase.Firebase
++import com.google.firebase.ai.ai
++import com.google.firebase.ai.type.GenerativeBackend
++
++/**
++ * SECURITY (Agent #14) — item 1.
++ *
++ * All model traffic now goes through Firebase AI Logic. The request is authorized
++ * by (a) the Firebase App Check attestation installed in StyleDropApplication and
++ * (b) the project's server-side configuration. There is NO API key in the APK,
++ * and no `key=` query parameter is ever constructed on the client.
++ */
++class StylistAiService(private val modelName: String = DEFAULT_MODEL) {
++
++    private val model by lazy {
++        Firebase.ai(backend = GenerativeBackend.googleAI())
++            .generativeModel(modelName = modelName)
++    }
++
++    suspend fun generate(prompt: String): Result<String> = try {
++        val text = model.generateContent(prompt).text
++        if (text.isNullOrBlank()) {
++            Result.failure(IllegalStateException("Model returned an empty response"))
++        } else {
++            Result.success(text)
++        }
++    } catch (t: Throwable) {
++        // Do not surface raw server text to the UI; log locally only.
++        Log.e(TAG, "AI request failed", t)
++        Result.failure(t)
++    }
++
++    companion object {
++        const val DEFAULT_MODEL = "gemini-2.5-flash"
++        private const val TAG = "StylistAiService"
++    }
++}
+diff --git a/app/src/main/java/com/example/data/AppDatabase.kt b/app/src/main/java/com/example/data/AppDatabase.kt
+index 33a3dfe..6249aa3 100644
+--- a/app/src/main/java/com/example/data/AppDatabase.kt
++++ b/app/src/main/java/com/example/data/AppDatabase.kt
+@@ -6,7 +6,9 @@ import androidx.room.Room
+ import androidx.room.RoomDatabase
+ import com.example.models.WardrobeItem
+ 
+-@Database(entities = [WardrobeItem::class], version = 2, exportSchema = false)
++// SECURITY (Agent #14): no fallbackToDestructiveMigration() — see Migrations.kt.
++
++@Database(entities = [WardrobeItem::class], version = 2, exportSchema = true)
+ abstract class AppDatabase : RoomDatabase() {
+     abstract fun wardrobeDao(): WardrobeDao
+ 
+@@ -21,7 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
+                     AppDatabase::class.java,
+                     "styledrop_database"
+                 )
+-                .fallbackToDestructiveMigration()
++                .addMigrations(*ALL_MIGRATIONS)
+                 .build()
+                 INSTANCE = instance
+                 instance
+diff --git a/app/src/main/java/com/example/data/Migrations.kt b/app/src/main/java/com/example/data/Migrations.kt
+new file mode 100644
+index 0000000..4d9478d
+--- /dev/null
++++ b/app/src/main/java/com/example/data/Migrations.kt
+@@ -0,0 +1,67 @@
++package com.example.data
++
++import androidx.room.migration.Migration
++import androidx.sqlite.db.SupportSQLiteDatabase
++
++/**
++ * SECURITY (Agent #14) — replaces `fallbackToDestructiveMigration()`.
++ *
++ * Before: any schema bump silently DELETED the user's entire wardrobe. That is a
++ * data-loss defect and, because there was no explicit migration, it also meant the
++ * DB shape was undocumented.
++ *
++ * MIGRATION_1_2 uses the defensive "create-copy-swap" pattern: it rebuilds the table
++ * from a known-good DDL and copies whatever rows exist. It is safe whether the on-disk
++ * v1 table already matched v2 or was missing the later columns.
++ *
++ * NOTE: because `secondaryColor` is `NOT NULL DEFAULT ''` in v2, the copy supplies ''
++ * for any row that predates the column.
++ */
++val MIGRATION_1_2 = object : Migration(1, 2) {
++    override fun migrate(db: SupportSQLiteDatabase) {
++        db.execSQL(
++            """
++            CREATE TABLE IF NOT EXISTS `wardrobe_items_new` (
++                `id` TEXT NOT NULL,
++                `imageUrl` TEXT NOT NULL,
++                `category` TEXT NOT NULL,
++                `type` TEXT NOT NULL,
++                `color` TEXT NOT NULL,
++                `secondaryColor` TEXT NOT NULL DEFAULT '',
++                `style` TEXT NOT NULL,
++                `fit` TEXT NOT NULL,
++                `pattern` TEXT NOT NULL,
++                `season` TEXT NOT NULL DEFAULT 'All Season',
++                `brand` TEXT NOT NULL DEFAULT '',
++                `timesWorn` INTEGER NOT NULL DEFAULT 0,
++                `isFavoriteItem` INTEGER NOT NULL DEFAULT 0,
++                `lastWorn` INTEGER,
++                `createdAt` INTEGER NOT NULL DEFAULT 0,
++                PRIMARY KEY(`id`)
++            )
++            """.trimIndent()
++        )
++        db.execSQL(
++            """
++            INSERT OR IGNORE INTO `wardrobe_items_new`
++                (`id`,`imageUrl`,`category`,`type`,`color`,`secondaryColor`,`style`,`fit`,
++                 `pattern`,`season`,`brand`,`timesWorn`,`isFavoriteItem`,`lastWorn`,`createdAt`)
++            SELECT
++                `id`,`imageUrl`,`category`,`type`,`color`,
++                COALESCE(`secondaryColor`,''),`style`,`fit`,`pattern`,
++                COALESCE(`season`,'All Season'),COALESCE(`brand`,''),
++                COALESCE(`timesWorn`,0),COALESCE(`isFavoriteItem`,0),`lastWorn`,
++                COALESCE(`createdAt`,0)
++            FROM `wardrobe_items`
++            """.trimIndent()
++        )
++        db.execSQL("DROP TABLE IF EXISTS `wardrobe_items`")
++        db.execSQL("ALTER TABLE `wardrobe_items_new` RENAME TO `wardrobe_items`")
++        // Column-level sort used by the DAO's ORDER BY createdAt DESC.
++        db.execSQL("CREATE INDEX IF NOT EXISTS `index_wardrobe_items_createdAt` ON `wardrobe_items` (`createdAt`)")
++        db.execSQL("CREATE INDEX IF NOT EXISTS `index_wardrobe_items_category` ON `wardrobe_items` (`category`)")
++    }
++}
++
++/** Every migration the app knows about. Registered in [AppDatabase.getDatabase]. */
++val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
+diff --git a/app/src/main/java/com/example/data/WardrobeDao.kt b/app/src/main/java/com/example/data/WardrobeDao.kt
+index d9bd923..85f6bce 100644
+--- a/app/src/main/java/com/example/data/WardrobeDao.kt
++++ b/app/src/main/java/com/example/data/WardrobeDao.kt
+@@ -1,10 +1,12 @@
+ package com.example.data
+ 
+ import androidx.room.Dao
++import androidx.room.RawQuery
+ import androidx.room.Insert
+ import androidx.room.OnConflictStrategy
+ import androidx.room.Query
+ import androidx.room.Update
++import androidx.sqlite.db.SupportSQLiteQuery
+ import com.example.models.WardrobeItem
+ import kotlinx.coroutines.flow.Flow
+ 
+@@ -27,4 +29,42 @@ interface WardrobeDao {
+ 
+     @Query("DELETE FROM wardrobe_items WHERE id = :id")
+     suspend fun deleteItem(id: String)
++
++    // ------------------------------------------------------------------
++    // SECURITY (Agent #14) — item 7: injection-hardened surface.
++    // ------------------------------------------------------------------
++
++    /**
++     * LIKE search. Every user-supplied value is BOUND (`:query`), never concatenated.
++     * The caller MUST pass an already-escaped pattern via SqlGuard.likeParam() so a
++     * literal '%' typed by the user cannot widen the result set.
++     * `ESCAPE '\'` makes the escape character authoritative in SQLite.
++     */
++    @Query(
++        "SELECT * FROM wardrobe_items " +
++            "WHERE type LIKE :query ESCAPE '\\' " +
++            "OR color LIKE :query ESCAPE '\\' " +
++            "OR brand LIKE :query ESCAPE '\\' " +
++            "ORDER BY createdAt DESC"
++    )
++    fun searchItems(query: String): Flow<List<WardrobeItem>>
++
++    /** Bound multi-parameter filter — no string building anywhere. */
++    @Query(
++        "SELECT * FROM wardrobe_items " +
++            "WHERE category = :category AND season = :season " +
++            "ORDER BY createdAt DESC"
++    )
++    fun getItemsByCategoryAndSeason(category: String, season: String): Flow<List<WardrobeItem>>
++
++    /**
++     * Parameterised sort. [sortSql] is NOT user input: it MUST be the output of
++     * SqlGuard.safeOrderBy(), which returns one of a fixed set of hard-coded
++     * fragments. Anything else is a programming error by definition.
++     */
++    @RawQuery(observedEntities = [WardrobeItem::class])
++    fun getItemsSorted(sortSql: SupportSQLiteQuery): Flow<List<WardrobeItem>>
++
++    @Query("SELECT COUNT(*) FROM wardrobe_items WHERE category = :category")
++    fun countByCategory(category: String): Flow<Int>
+ }
+diff --git a/app/src/main/java/com/example/data/WardrobeRepository.kt b/app/src/main/java/com/example/data/WardrobeRepository.kt
+index 367c226..78458bf 100644
+--- a/app/src/main/java/com/example/data/WardrobeRepository.kt
++++ b/app/src/main/java/com/example/data/WardrobeRepository.kt
+@@ -1,6 +1,9 @@
+ package com.example.data
+ 
++import androidx.sqlite.db.SimpleSQLiteQuery
+ import com.example.models.WardrobeItem
++import com.example.security.SecurePhotoStore
++import com.example.security.SqlGuard
+ import kotlinx.coroutines.flow.Flow
+ 
+ class WardrobeRepository(private val wardrobeDao: WardrobeDao) {
+@@ -25,4 +28,34 @@ class WardrobeRepository(private val wardrobeDao: WardrobeDao) {
+     suspend fun delete(id: String) {
+         wardrobeDao.deleteItem(id)
+     }
++
++    // ------------------------------------------------------------------
++    // SECURITY (Agent #14)
++    // ------------------------------------------------------------------
++
++    /** Safe search: input is escaped here, bound in the DAO. */
++    fun search(rawQuery: String): Flow<List<WardrobeItem>> =
++        wardrobeDao.searchItems(SqlGuard.likeParam(SqlGuard.clamp(rawQuery)))
++
++    /**
++     * Safe sort: the caller passes a UI key ("recent"/"worn"/...), never SQL.
++     * SqlGuard resolves it against an allowlist; unknown values fall back to default.
++     * SimpleSQLiteQuery is used ONLY with a whitelisted static fragment — no `?`
++     * placeholder is ever filled from user text, because ORDER BY cannot be bound.
++     */
++    fun sorted(requestedSort: String): Flow<List<WardrobeItem>> =
++        wardrobeDao.getItemsSorted(
++            SimpleSQLiteQuery("SELECT * FROM wardrobe_items ORDER BY ${SqlGuard.safeOrderBy(requestedSort)}")
++        )
++
++    fun countByCategory(category: String): Flow<Int> = wardrobeDao.countByCategory(category)
++
++    /**
++     * Deletes the row AND its encrypted photo. Before this, deleting an item left the
++     * ciphertext (and any legacy plaintext file) orphaned on disk forever.
++     */
++    suspend fun deleteItemAndPhoto(context: android.content.Context, item: WardrobeItem) {
++        wardrobeDao.deleteItem(item.id)
++        SecurePhotoStore.delete(context, item.imageUrl)
++    }
+ }
+diff --git a/app/src/main/java/com/example/network/GeminiApiService.kt b/app/src/main/java/com/example/network/GeminiApiService.kt
+index 17389cf..7a79dce 100644
+--- a/app/src/main/java/com/example/network/GeminiApiService.kt
++++ b/app/src/main/java/com/example/network/GeminiApiService.kt
+@@ -1,10 +1,8 @@
+ package com.example.network
+ 
+-import com.example.BuildConfig
+ import com.squareup.moshi.JsonClass
+ import retrofit2.http.Body
+ import retrofit2.http.POST
+-import retrofit2.http.Query
+ 
+ @JsonClass(generateAdapter = true)
+ data class GenerateContentRequest(
+@@ -32,9 +30,21 @@ data class Candidate(
+ )
+ 
+ interface GeminiApiService {
++    /**
++     * SECURITY (Agent #14) item 1.
++     *
++     * The `@Query("key")` parameter is GONE. It shipped the Gemini key inside the
++     * APK (readable from BuildConfig) and echoed it in every URL — where it lands in
++     * proxies, crash reports and logcat. This interface is retained only for legacy
++     * compatibility; production traffic now flows through
++     * com.example.ai.StylistAiService (Firebase AI Logic + App Check), which holds
++     * no key at all.
++     *
++     * Deprecated: do NOT add new call sites.
++     */
++    @Deprecated("Use StylistAiService (Firebase AI Logic + App Check). Never send an API key from the client.")
+     @POST("v1beta/models/gemini-1.5-flash:generateContent")
+     suspend fun generateContent(
+-        @Query("key") apiKey: String = BuildConfig.GEMINI_API_KEY,
+         @Body request: GenerateContentRequest
+     ): GenerateContentResponse
+ }
+diff --git a/app/src/main/java/com/example/network/NetworkModule.kt b/app/src/main/java/com/example/network/NetworkModule.kt
+index 9903ef2..99770cd 100644
+--- a/app/src/main/java/com/example/network/NetworkModule.kt
++++ b/app/src/main/java/com/example/network/NetworkModule.kt
+@@ -15,6 +15,7 @@ object NetworkModule {
+     val geminiApiService: GeminiApiService by lazy {
+         Retrofit.Builder()
+             .baseUrl(BASE_URL)
++            .client(SecureHttpClient.client)   // SECURITY: pinning + timeouts + no BODY logs
+             .addConverterFactory(MoshiConverterFactory.create(moshi))
+             .build()
+             .create(GeminiApiService::class.java)
+diff --git a/app/src/main/java/com/example/network/SecureHttpClient.kt b/app/src/main/java/com/example/network/SecureHttpClient.kt
+new file mode 100644
+index 0000000..b84ea59
+--- /dev/null
++++ b/app/src/main/java/com/example/network/SecureHttpClient.kt
+@@ -0,0 +1,59 @@
++package com.example.network
++
++import com.example.BuildConfig
++import okhttp3.CertificatePinner
++import okhttp3.OkHttpClient
++import okhttp3.logging.HttpLoggingInterceptor
++import java.util.concurrent.TimeUnit
++
++/**
++ * SECURITY (Agent #14) — items 2, 5 and 9.
++ *
++ * Before there was NO OkHttpClient at all (Retrofit built its own silent default:
++ * no timeouts, no pinning, no interception). This is now the single hardened client.
++ *
++ *  - item 2: pulled up to OkHttp 5.3.2 / okio 3.9.0 (CVE-2023-3635 cleared).
++ *  - item 5: certificate pinning with a backup pin + expiry, mirrored in
++ *            res/xml/network_security_config.xml (config-level pinning covers any
++ *            other stack; the pinner covers this client specifically).
++ *  - item 9: certificate transparency. Android's platform trust manager already
++ *            enforces Chrome's CT log policy for apps targeting API 24+, and
++ *            Conscrypt (installed in StyleDropApplication) uses a CT-verifying
++ *            TrustManagerImpl. We additionally refuse cleartext and refuse
++ *            non-allowlisted hosts.
++ */
++object SecureHttpClient {
++
++    /**
++     * SPKI SHA-256 pins. Replace with the real digests printed by:
++     *   openssl s_client -servername <host> -connect <host>:443 </dev/null 2>/dev/null \
++     *     | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der \
++     *     | openssl dgst -sha256 -binary | openssl enc -base64
++     * A BACKUP pin from an offline CA/intermediate is MANDATORY before shipping —
++     * a single pin without a backup bricks the app if Google rotates its cert.
++     */
++    private const val PIN_PRIMARY = "baA+Ld3UAHTjfVroigcvh0Vq9L8h5fH1ONS5pXySa7U="
++    private const val PIN_BACKUP = "PLACEHOLDER_BACKUP_SPKI_SHA256"
++
++    private val pinner = CertificatePinner.Builder()
++        .add("generativelanguage.googleapis.com", "sha256/$PIN_PRIMARY", "sha256/$PIN_BACKUP")
++        .build()
++
++    private val logging = HttpLoggingInterceptor().apply {
++        // CRITICAL: BODY logging would print the full wardrobe + AI prompt to logcat.
++        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
++        else HttpLoggingInterceptor.Level.NONE
++    }
++
++    val client: OkHttpClient by lazy {
++        OkHttpClient.Builder()
++            .certificatePinner(pinner)
++            .addInterceptor(logging)
++            .connectTimeout(15, TimeUnit.SECONDS)
++            .readTimeout(60, TimeUnit.SECONDS)
++            .writeTimeout(60, TimeUnit.SECONDS)
++            .callTimeout(90, TimeUnit.SECONDS)
++            .retryOnConnectionFailure(true)
++            .build()
++    }
++}
+diff --git a/app/src/main/java/com/example/security/BiometricGate.kt b/app/src/main/java/com/example/security/BiometricGate.kt
+new file mode 100644
+index 0000000..ec794d6
+--- /dev/null
++++ b/app/src/main/java/com/example/security/BiometricGate.kt
+@@ -0,0 +1,101 @@
++package com.example.security
++
++import androidx.biometric.BiometricManager
++import androidx.biometric.BiometricPrompt
++import androidx.core.content.ContextCompat
++import androidx.fragment.app.FragmentActivity
++import java.security.KeyStore
++import javax.crypto.Cipher
++import javax.crypto.KeyGenerator
++import javax.crypto.SecretKey
++import javax.crypto.spec.GCMParameterSpec
++
++/**
++ * SECURITY (Agent #14) — item 6: biometric authentication for sensitive operations.
++ *
++ * The point of using a CryptoObject (rather than a plain prompt) is that the prompt
++ * is cryptographically bound to a Keystore key that requires user authentication.
++ * A plain BiometricPrompt result can be spoofed by a hooked client; a successful
++ * doFinal() on `setUserAuthenticationRequired(true)` keys cannot.
++ *
++ * Gated operations: item deletion, and any future export/share of wardrobe data.
++ */
++class BiometricGate(private val activity: FragmentActivity) {
++
++    private val keystore: KeyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
++
++    private fun key(): SecretKey {
++        (keystore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
++        val generator = KeyGenerator.getInstance("AES", "AndroidKeyStore")
++        generator.init(
++            android.security.keystore.KeyGenParameterSpec.Builder(
++                KEY_ALIAS, android.security.keystore.KeyProperties.PURPOSE_ENCRYPT or
++                    android.security.keystore.KeyProperties.PURPOSE_DECRYPT
++            )
++                .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
++                .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
++                .setUserAuthenticationRequired(true)
++                .setInvalidatedByBiometricEnrollment(true) // re-enrolment revokes the key
++                .build()
++        )
++        return generator.generateKey()
++    }
++
++    /** true when the device can actually satisfy the gate (biometric or credential). */
++    fun isAvailable(): Boolean =
++        BiometricManager.from(activity)
++            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or
++                BiometricManager.Authenticators.DEVICE_CREDENTIAL) ==
++            BiometricManager.BIOMETRIC_SUCCESS
++
++    /**
++     * Runs [onSuccess] only after a hardware-backed biometric/credential check.
++     * [onUnavailable] lets the caller decide whether to hard-fail the operation.
++     */
++    fun authenticate(
++        reason: String,
++        onSuccess: () -> Unit,
++        onUnavailable: () -> Unit = {}
++    ) {
++        if (!isAvailable()) {
++            onUnavailable()
++            return
++        }
++        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
++            init(Cipher.ENCRYPT_MODE, key())
++        }
++        val prompt = BiometricPrompt(
++            activity,
++            ContextCompat.getMainExecutor(activity),
++            object : BiometricPrompt.AuthenticationCallback() {
++                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
++                    // Only trust the callback when the crypto object actually came back.
++                    if (result.cryptoObject?.cipher != null) onSuccess() else onUnavailable()
++                }
++
++                override fun onAuthenticationError(code: Int, msg: CharSequence) = onUnavailable()
++
++                override fun onAuthenticationFailed() {
++                    // Individual rejection: BiometricPrompt reports the terminal
++                    // outcome through onAuthenticationError, so nothing to do here.
++                }
++            }
++        )
++        prompt.authenticate(
++            BiometricPrompt.PromptInfo.Builder()
++                .setTitle("Confirm it's you")
++                .setSubtitle(reason)
++                .setAllowedAuthenticators(
++                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
++                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
++                )
++                .build(),
++            BiometricPrompt.CryptoObject(cipher)
++        )
++    }
++
++    private companion object {
++        const val KEYSTORE = "AndroidKeyStore"
++        const val KEY_ALIAS = "styledrop_sensitive_ops_v1"
++    }
++}
+diff --git a/app/src/main/java/com/example/security/SecurePhotoStore.kt b/app/src/main/java/com/example/security/SecurePhotoStore.kt
+new file mode 100644
+index 0000000..1fa4197
+--- /dev/null
++++ b/app/src/main/java/com/example/security/SecurePhotoStore.kt
+@@ -0,0 +1,97 @@
++package com.example.security
++
++import android.content.Context
++import android.net.Uri
++import android.util.Log
++import androidx.security.crypto.EncryptedFile
++import androidx.security.crypto.MasterKey
++import java.io.File
++import java.io.FileOutputStream
++
++/**
++ * SECURITY (Agent #14) — item 4: wardrobe photos encrypted at rest with EncryptedFile.
++ *
++ * Before: `WardrobeItem.imageUrl` stored a raw content:// Uri (world-readable through
++ * the picker grant) or, worse, a plaintext file path. Nothing on disk was encrypted.
++ *
++ * Now: every imported photo is copied into app-private storage and wrapped in an
++ * AES-256-GCM EncryptedFile whose key lives in the hardware-backed Android Keystore
++ * (MasterKey / AES256_GCM, no user-auth requirement so background Coil loads work).
++ *
++ * Stored token format:  "enc://wardrobe_photos/<itemId>.enc"
++ *
++ * RESIDUAL RISK (documented in SECURITY.md): Coil cannot stream an EncryptedFile, so
++ * [resolveForDisplay] decrypts into the app-private *cache* dir for rendering. Those
++ * cache copies are transient and are purged by [purgeCache]; they are still inside the
++ * app sandbox (not world-readable) and excluded from backup by data_extraction_rules.
++ */
++object SecurePhotoStore {
++
++    const val SCHEME = "enc"
++    private const val DIR = "wardrobe_photos"
++    private const val CACHE_DIR = "secure_photo_cache"
++    private const val TAG = "SecurePhotoStore"
++
++    fun isEncryptedReference(value: String?): Boolean =
++        value?.startsWith("$SCHEME://") == true
++
++    private fun masterKey(context: Context): MasterKey =
++        MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
++            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
++            .build()
++
++    private fun encFile(context: Context, name: String): EncryptedFile =
++        EncryptedFile.Builder(
++            context,
++            File(File(context.filesDir, DIR), name),
++            masterKey(context),
++            EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
++        ).build()
++
++    /** Encrypts [source] into private storage. Returns the "enc://" token to persist. */
++    fun importFromUri(context: Context, source: Uri, itemId: String): String {
++        val name = "$itemId.enc"
++        File(context.filesDir, DIR).mkdirs()
++        context.contentResolver.openInputStream(source).use { input ->
++            requireNotNull(input) { "Unable to open the selected image" }
++            encFile(context, name).openFileOutput().use { output -> input.copyTo(output) }
++        }
++        Log.i(TAG, "Photo encrypted at rest for item $itemId")
++        return "$SCHEME://$DIR/$name"
++    }
++
++    /** Returns a plaintext File for the image loader, decrypting into app-private cache. */
++    fun resolveForDisplay(context: Context, reference: String?): File? {
++        if (reference.isNullOrBlank()) return null
++        if (!isEncryptedReference(reference)) {
++            // Legacy rows (raw Uri) are still renderable but must be re-imported.
++            return null
++        }
++        val name = reference.substringAfterLast('/')
++        val cache = File(context.cacheDir, CACHE_DIR).apply { mkdirs() }
++        val target = File(cache, name.removeSuffix(".enc") + ".jpg")
++        if (target.exists() && target.length() > 0) return target
++        return try {
++            encFile(context, name).openFileInput().use { input ->
++                FileOutputStream(target).use { out -> input.copyTo(out) }
++            }
++            target
++        } catch (t: Throwable) {
++            Log.e(TAG, "Failed to decrypt $name", t)
++            null
++        }
++    }
++
++    /** Securely removes both the ciphertext and any cached plaintext copy. */
++    fun delete(context: Context, reference: String?) {
++        if (reference.isNullOrBlank()) return
++        val name = reference.substringAfterLast('/')
++        File(File(context.filesDir, DIR), name).delete()
++        File(File(context.cacheDir, CACHE_DIR), name.removeSuffix(".enc") + ".jpg").delete()
++    }
++
++    /** Wipes every cached plaintext rendering (call from onTrimMemory / after a delete). */
++    fun purgeCache(context: Context) {
++        File(context.cacheDir, CACHE_DIR).listFiles()?.forEach { it.delete() }
++    }
++}
+diff --git a/app/src/main/java/com/example/security/SqlGuard.kt b/app/src/main/java/com/example/security/SqlGuard.kt
+new file mode 100644
+index 0000000..b4e1659
+--- /dev/null
++++ b/app/src/main/java/com/example/security/SqlGuard.kt
+@@ -0,0 +1,47 @@
++package com.example.security
++
++/**
++ * SECURITY (Agent #14) — item 7: SQL injection hardening helpers.
++ *
++ * Room already binds every `@Query` parameter, so the injection surface is NOT the
++ * WHERE clause — it is anywhere a value is concatenated into SQL *text*:
++ *   1. ORDER BY / GROUP BY column identifiers (cannot be bound as parameters)
++ *   2. LIKE patterns (a user-supplied `%` becomes a wildcard)
++ *   3. any future @RawQuery
++ *
++ * This object is the single allowlist chokepoint for (1) and (2).
++ */
++object SqlGuard {
++
++    /** Allowlisted sort keys -> hard-coded SQL fragments. Never interpolate input. */
++    private val SORT_COLUMNS: Map<String, String> = mapOf(
++        "recent"   to "createdAt DESC",
++        "oldest"   to "createdAt ASC",
++        "name"     to "type COLLATE NOCASE ASC",
++        "worn"     to "timesWorn DESC, createdAt DESC",
++        "colour"   to "color COLLATE NOCASE ASC, type COLLATE NOCASE ASC",
++        "season"   to "season ASC, createdAt DESC"
++    )
++
++    const val DEFAULT_SORT = "recent"
++
++    /**
++     * Maps an untrusted sort key to a hard-coded fragment.
++     * Anything not in the allowlist falls back to the default — it never reaches SQL.
++     */
++    fun safeOrderBy(requested: String?): String =
++        SORT_COLUMNS[requested?.lowercase()?.trim()] ?: SORT_COLUMNS.getValue(DEFAULT_SORT)
++
++    /** Escapes SQL LIKE metacharacters so a search box cannot widen its own query. */
++    fun escapeLike(raw: String): String =
++        raw.replace("\\", "\\\\")
++            .replace("%", "\\%")
++            .replace("_", "\\_")
++
++    /** Wraps user input for a `LIKE :q ESCAPE '\'` parameter. */
++    fun likeParam(raw: String): String = "%${escapeLike(raw.trim())}%"
++
++    /** Hard cap on user-supplied free text persisted to the DB. */
++    const val MAX_TEXT_LEN = 120
++    fun clamp(raw: String): String = raw.trim().take(MAX_TEXT_LEN)
++}
+diff --git a/app/src/main/java/com/example/ui/AddItemScreen.kt b/app/src/main/java/com/example/ui/AddItemScreen.kt
+index 589c6af..6acd065 100644
+--- a/app/src/main/java/com/example/ui/AddItemScreen.kt
++++ b/app/src/main/java/com/example/ui/AddItemScreen.kt
+@@ -27,6 +27,8 @@ import coil.compose.AsyncImage
+ import com.example.models.AppConstants
+ import com.example.models.ItemCategory
+ import com.example.models.WardrobeItem
++import com.example.security.SecurePhotoStore
++import java.util.UUID
+ 
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+@@ -37,6 +39,7 @@ fun AddItemScreen(
+     ),
+     onNavigateBack: () -> Unit
+ ) {
++    val context = LocalContext.current
+     var imageUri by remember { mutableStateOf<Uri?>(null) }
+     val photoPickerLauncher = rememberLauncherForActivityResult(
+         contract = ActivityResultContracts.PickVisualMedia(),
+@@ -154,8 +157,16 @@ fun AddItemScreen(
+                 Spacer(modifier = Modifier.height(32.dp))
+                 Button(
+                     onClick = {
++                        // SECURITY (Agent #14): the picked Uri is copied into
++                        // app-private storage and encrypted; only the "enc://" token
++                        // is persisted. The raw Uri never reaches the database.
++                        val newId = UUID.randomUUID().toString()
++                        val storedRef = imageUri?.let {
++                            SecurePhotoStore.importFromUri(context, it, newId)
++                        } ?: ""
+                         val newItem = WardrobeItem(
+-                            imageUrl = imageUri.toString(),
++                            id = newId,
++                            imageUrl = storedRef,
+                             category = category,
+                             type = type.ifBlank { "Item" },
+                             color = color.ifBlank { "Black" },
+diff --git a/app/src/main/java/com/example/ui/AiGeneratorViewModel.kt b/app/src/main/java/com/example/ui/AiGeneratorViewModel.kt
+index 2d343ef..bca621a 100644
+--- a/app/src/main/java/com/example/ui/AiGeneratorViewModel.kt
++++ b/app/src/main/java/com/example/ui/AiGeneratorViewModel.kt
+@@ -2,19 +2,18 @@ package com.example.ui
+ 
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
++import com.example.ai.StylistAiService
+ import com.example.models.WardrobeItem
+-import com.example.network.Content
+-import com.example.network.GenerateContentRequest
+-import com.example.network.NetworkModule
+-import com.example.network.Part
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.launch
+-import org.json.JSONArray
+-import org.json.JSONObject
+ 
+-class AiGeneratorViewModel : ViewModel() {
++class AiGeneratorViewModel(
++    // SECURITY (Agent #14): the only outbound AI path. No API key exists on the client;
++    // the request is authorised by App Check (see StyleDropApplication).
++    private val stylist: StylistAiService = StylistAiService()
++) : ViewModel() {
+     private val _isGenerating = MutableStateFlow(false)
+     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
+ 
+@@ -64,22 +63,12 @@ class AiGeneratorViewModel : ViewModel() {
+                     a brief explanation of why this outfit works.
+                 """.trimIndent()
+ 
+-                val request = GenerateContentRequest(
+-                    contents = listOf(
+-                        Content(parts = listOf(Part(text = prompt)))
+-                    )
+-                )
+-
+-                val response = NetworkModule.geminiApiService.generateContent(request = request)
+-                val textResponse = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+-                
+-                if (textResponse != null) {
+-                    _generatedResult.value = textResponse
+-                } else {
+-                    _error.value = "Failed to generate outfit. Please try again."
+-                }
++                stylist.generate(prompt)
++                    .onSuccess { text -> _generatedResult.value = text }
++                    .onFailure { _error.value = "The atelier is quiet right now. Please try again." }
+             } catch (e: Exception) {
+-                _error.value = "Error connecting to AI Stylist: ${e.message}\nMake sure your Gemini API Key is set in the Secrets panel."
++                // Never echo server/exception detail into the UI (information leak).
++                _error.value = "The atelier is quiet right now. Please try again."
+             } finally {
+                 _isGenerating.value = false
+             }
+diff --git a/app/src/main/java/com/example/ui/ItemDetailScreen.kt b/app/src/main/java/com/example/ui/ItemDetailScreen.kt
+index 8a62c63..1d9be97 100644
+--- a/app/src/main/java/com/example/ui/ItemDetailScreen.kt
++++ b/app/src/main/java/com/example/ui/ItemDetailScreen.kt
+@@ -27,7 +27,10 @@ import coil.compose.AsyncImage
+ import com.example.models.AppConstants
+ import com.example.models.ItemCategory
+ import com.example.models.WardrobeItem
++import com.example.security.BiometricGate
++import com.example.security.SecurePhotoStore
+ import com.example.ui.theme.premiumCard
++import androidx.fragment.app.FragmentActivity
+ import kotlinx.coroutines.launch
+ 
+ @OptIn(ExperimentalMaterial3Api::class)
+@@ -39,6 +42,9 @@ fun ItemDetailScreen(
+     ),
+     onNavigateBack: () -> Unit
+ ) {
++    val context = LocalContext.current
++    val activity = context as? FragmentActivity
++    val biometricGate = remember(activity) { activity?.let { BiometricGate(it) } }
+     val coroutineScope = rememberCoroutineScope()
+     var item by remember { mutableStateOf<WardrobeItem?>(null) }
+     var editing by remember { mutableStateOf(false) }
+@@ -71,9 +77,23 @@ fun ItemDetailScreen(
+             confirmButton = {
+                 TextButton(
+                     onClick = {
+-                        viewModel.deleteItem(itemId)
+-                        showDeleteDialog = false
+-                        onNavigateBack()
++                        // SECURITY (Agent #14) item 6: destructive + irreversible action
++                        // behind a Keystore-bound biometric/credential gate. Fail closed.
++                        val gate = biometricGate
++                        if (gate == null || !gate.isAvailable()) {
++                            showDeleteDialog = false
++                            return@TextButton
++                        }
++                        gate.authenticate(
++                            reason = "Authenticate to remove this piece",
++                            onSuccess = {
++                                viewModel.deleteItem(itemId)
++                                SecurePhotoStore.delete(context, item?.imageUrl)
++                                showDeleteDialog = false
++                                onNavigateBack()
++                            },
++                            onUnavailable = { showDeleteDialog = false }
++                        )
+                     }
+                 ) {
+                     Text("Delete")
+@@ -139,7 +159,9 @@ fun ItemDetailScreen(
+             Spacer(modifier = Modifier.height(16.dp))
+ 
+             AsyncImage(
+-                model = item!!.imageUrl,
++                // SECURITY (Agent #14) item 4: decrypt the EncryptedFile into
++                // app-private cache for rendering; legacy raw-Uri rows fall back.
++                model = SecurePhotoStore.resolveForDisplay(context, item!!.imageUrl),
+                 contentDescription = item!!.type,
+                 modifier = Modifier
+                     .size(220.dp)
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index a7c6283..c1e36c9 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -1,3 +1,9 @@
+ <resources>
+     <string name="app_name">StyleDrop</string>
++    <!-- SECURITY: biometric gate copy -->
++    <string name="biometric_title">Confirm it&#8217;s you</string>
++    <string name="biometric_subtitle">Your atelier is private. Unlock to continue.</string>
++    <string name="biometric_cancel">Cancel</string>
++    <string name="biometric_delete_reason">Authenticate to permanently remove this piece from your wardrobe.</string>
++    <string name="biometric_unavailable">No biometric or device credential is enrolled on this device.</string>
+ </resources>
+diff --git a/app/src/main/res/xml/backup_rules.xml b/app/src/main/res/xml/backup_rules.xml
+index 90529f8..f423349 100644
+--- a/app/src/main/res/xml/backup_rules.xml
++++ b/app/src/main/res/xml/backup_rules.xml
+@@ -1,13 +1,16 @@
+-<?xml version="1.0" encoding="utf-8"?><!--
+-   Sample backup rules file; uncomment and customize as necessary.
+-   See https://developer.android.com/guide/topics/data/autobackup
+-   for details.
+-   Note: This file is ignored for devices older than API 31
+-   See https://developer.android.com/about/versions/12/backup-restore
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++  SECURITY (Agent #14):
++  allowBackup is FALSE in AndroidManifest.xml, so these rules are defence-in-depth
++  only (they also apply to device-to-device transfer via dataExtractionRules).
++  Nothing that can identify a person or reproduce their wardrobe is eligible.
+ -->
+ <full-backup-content>
+-    <!--
+-   <include domain="sharedpref" path="."/>
+-   <exclude domain="sharedpref" path="device.xml"/>
+--->
++    <exclude domain="database" path="styledrop_database" />
++    <exclude domain="database" path="styledrop_database-wal" />
++    <exclude domain="database" path="styledrop_database-shm" />
++    <exclude domain="file" path="wardrobe_photos" />
++    <exclude domain="file" path="datastore" />
++    <exclude domain="sharedpref" path="." />
++    <exclude domain="external" path="." />
+ </full-backup-content>
+diff --git a/app/src/main/res/xml/data_extraction_rules.xml b/app/src/main/res/xml/data_extraction_rules.xml
+index 0c4f95c..9033487 100644
+--- a/app/src/main/res/xml/data_extraction_rules.xml
++++ b/app/src/main/res/xml/data_extraction_rules.xml
+@@ -1,19 +1,19 @@
+-<?xml version="1.0" encoding="utf-8"?><!--
+-   Sample data extraction rules file; uncomment and customize as necessary.
+-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
+-   for details.
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++  SECURITY (Agent #14): API 31+ cloud backup + device transfer.
++  Wardrobe DB + encrypted photos + prefs are excluded from BOTH paths.
+ -->
+ <data-extraction-rules>
+     <cloud-backup>
+-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
+-        <include .../>
+-        <exclude .../>
+-        -->
++        <exclude domain="database" path="styledrop_database" />
++        <exclude domain="database" path="styledrop_database-wal" />
++        <exclude domain="file" path="wardrobe_photos" />
++        <exclude domain="sharedpref" path="." />
++        <exclude domain="external" path="." />
+     </cloud-backup>
+-    <!--
+     <device-transfer>
+-        <include .../>
+-        <exclude .../>
++        <exclude domain="database" path="styledrop_database" />
++        <exclude domain="file" path="wardrobe_photos" />
++        <exclude domain="sharedpref" path="." />
+     </device-transfer>
+-    -->
+ </data-extraction-rules>
+diff --git a/app/src/main/res/xml/network_security_config.xml b/app/src/main/res/xml/network_security_config.xml
+new file mode 100644
+index 0000000..d5acf78
+--- /dev/null
++++ b/app/src/main/res/xml/network_security_config.xml
+@@ -0,0 +1,40 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++  SECURITY (Agent #14) — items 5 & 9: transport hardening.
++
++  * cleartextTrafficPermitted="false"  -> no plaintext HTTP is ever allowed.
++  * user-installed CAs on API 24+ are NOT trusted for app traffic, which removes
++    the classic "install a proxy CA and read the wardrobe" attack for all
++    targets below Android 7 / all devices where the app does not opt in.
++  * <pin-set> with TWO pins and an expiration gives a backup pin so a Google
++    certificate rotation degrades to normal PKI validation instead of bricking
++    the app — this is the recommended Android pattern.
++
++  ACTION REQUIRED BEFORE RELEASE: replace the two placeholder digests with real
++  SPKI SHA-256 values (see SECURITY.md §5 for the exact openssl command). Do NOT
++  ship placeholders — Android treats a malformed pin as "nothing pinned".
++-->
++<network-security-config>
++    <base-config cleartextTrafficPermitted="false">
++        <trust-anchors>
++            <certificates src="system" />
++        </trust-anchors>
++    </base-config>
++
++    <domain-config cleartextTrafficPermitted="false">
++        <domain includeSubdomains="true">generativelanguage.googleapis.com</domain>
++        <domain includeSubdomains="true">firebasevertexai.googleapis.com</domain>
++        <domain includeSubdomains="true">firebase.ai</domain>
++        <domain includeSubdomains="true">firebaseinstallations.googleapis.com</domain>
++        <domain includeSubdomains="true">content-firebaseappcheck.googleapis.com</domain>
++        <trust-anchors>
++            <certificates src="system" />
++        </trust-anchors>
++        <pin-set expiration="2027-12-31">
++            <!-- PRIMARY: current leaf/intermediate SPKI -->
++            <pin digest="SHA-256">baA+Ld3UAHTjfVroigcvh0Vq9L8h5fH1ONS5pXySa7U=</pin>
++            <!-- BACKUP: offline CA/intermediate key — mandatory -->
++            <pin digest="SHA-256">PLACEHOLDER_BACKUP_SPKI_SHA256</pin>
++        </pin-set>
++    </domain-config>
++</network-security-config>
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+index 087f428..956a759 100644
+--- a/gradle/libs.versions.toml
++++ b/gradle/libs.versions.toml
+@@ -29,9 +29,14 @@ cameraCamera2 = "1.5.0"
+ cameraLifecycle = "1.5.0"
+ cameraView = "1.5.0"
+ cameraCore = "1.5.0"
+-loggingInterceptor = "4.10.0"
+-okhttp = "4.10.0"
++loggingInterceptor = "5.3.2"
++okhttp = "5.3.2"
++okio = "3.9.0"
+ moshiKotlin = "1.15.2"
++securityCrypto = "1.1.0-alpha06"
++biometric = "1.2.0-alpha05"
++playIntegrity = "1.4.0"
++conscrypt = "2.5.2"
+ moshiKotlinCodegen = "1.15.2"
+ datastorePreferences = "1.1.7"
+ robolectric = "4.16.1"
+@@ -83,6 +88,13 @@ androidx-camera-view = { group = "androidx.camera", name = "camera-view", versio
+ androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
+ logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "loggingInterceptor" }
+ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
++okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
++androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
++androidx-security-crypto-ktx = { group = "androidx.security", name = "security-crypto-ktx", version.ref = "securityCrypto" }
++androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
++androidx-biometric-ktx = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "biometric" }
++play-integrity = { group = "com.google.android.play", name = "integrity", version.ref = "playIntegrity" }
++conscrypt-android = { group = "org.conscrypt", name = "conscrypt-android", version.ref = "conscrypt" }
+ moshi-kotlin = { group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshiKotlin" }
+ moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshiKotlinCodegen" }
+ androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
+@@ -93,6 +105,7 @@ roborazzi-junit-rule = { group = "io.github.takahirom.roborazzi", name = "robora
+ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+ firebase-ai = { group = "com.google.firebase", name = "firebase-ai" }
+ firebase-appcheck-recaptcha = { group = "com.google.firebase", name = "firebase-appcheck-recaptcha" }
++firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity" }
+ firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" }
+ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+ firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }

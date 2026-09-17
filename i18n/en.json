@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "StyleDrop"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "nav": {
+    "home": "Home",
+    "wardrobe": "Wardrobe",
+    "ai": "AI",
+    "saved": "Saved",
+    "profile": "Profile"
+  },
+  "login": {
+    "tagline": "Your AI Wardrobe Stylist",
+    "signInToContinue": "Sign in to continue",
+    "google": "Continue with Google",
+    "apple": "Continue with Apple",
+    "email": "Continue with Email",
+    "skip": "Skip for now — Continue as Guest"
+  },
+  "home": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "greetingLate": "Working late",
+    "headline": "Your wardrobe, curated.",
+    "weatherLabel": "Today's Weather • Unknown",
+    "weatherValue": "22°C • Partly Cloudy",
+    "wardrobeStatus": "Wardrobe Status",
+    "recommended": "Recommended Outfit",
+    "recommendedHint": "Add a top, a bottom and a pair of shoes to get your first recommended outfit here.",
+    "generateCta": "Generate an outfit"
+  },
+  "category": {
+    "tops": "Tops",
+    "bottoms": "Bottoms",
+    "shoes": "Shoes",
+    "outerwear": "Outerwear",
+    "accessories": "Accessories",
+    "bags": "Bags",
+    "watches": "Watches",
+    "jewelry": "Jewelry"
+  },
+  "wardrobe": {
+    "title": "Wardrobe",
+    "addItem": "Add Item",
+    "emptyNoCategory": "No {category} yet",
+    "emptyHint": "Tap \"Add Item\" to snap or upload a photo."
+  },
+  "item": {
+    "garmentCard": "Garment: {type}, color {color}, {style} style. Double-tap to view details.",
+    "openItem": "Open item details",
+    "deleteTitle": "Delete item?",
+    "deleteMessage": "This will remove the item from your wardrobe.",
+    "category": "Category",
+    "type": "Type",
+    "color": "Color",
+    "pattern": "Pattern",
+    "style": "Style",
+    "fit": "Fit",
+    "season": "Season",
+    "brand": "Brand",
+    "worn": "Worn",
+    "wornTimes": "{count, plural, one {# time} other {# times}}"
+  },
+  "addItem": {
+    "title": "Add Item",
+    "addACategory": "Add a {category}",
+    "uploadPhoto": "Upload photo",
+    "typeField": "Type (e.g. Oversized T-Shirt)",
+    "colorField": "Color (e.g. Black)",
+    "brandField": "Brand (optional)",
+    "save": "Save item",
+    "selectedImage": "Selected image"
+  },
+  "ai": {
+    "title": "AI Stylist",
+    "createTitle": "Create your outfit",
+    "occasion": "Occasion",
+    "style": "Style",
+    "colorPref": "Color preference",
+    "weather": "Weather",
+    "automatic": "Automatic",
+    "shoes": "Shoes",
+    "useMyWardrobe": "Use only my wardrobe",
+    "useMyWardrobeHint": "Never suggests items you don't own",
+    "outfitCount": "Number of outfits",
+    "generate": "Generate outfit",
+    "generating": "Generating…"
+  },
+  "saved": {
+    "title": "My Outfits",
+    "calendar": "Outfit Calendar",
+    "mixMatch": "Mix & Match",
+    "emptyTitle": "No saved outfits yet",
+    "emptyHint": "Generate an outfit with the AI Stylist and tap SAVE."
+  },
+  "profile": {
+    "title": "Profile",
+    "guestName": "Guest User",
+    "guestAccount": "Guest account",
+    "freeBadge": "FREE",
+    "itemsStat": "Items",
+    "outfitsStat": "Outfits made",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "appearance": "Appearance",
+    "signInToSave": "Sign in to save data"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "stats": "Wardrobe Stats",
+    "totalItems": "Total Items",
+    "mostCommonColor": "Most Common Color",
+    "byCategory": "By Category"
+  }
+}

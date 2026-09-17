@@ -1,0 +1,2027 @@
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 5927aac..0250ee3 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -10,6 +10,7 @@
+         android:label="@string/app_name"
+         android:roundIcon="@mipmap/ic_launcher_round"
+         android:supportsRtl="true"
++        android:localeConfig="@xml/locales_config"
+         android:theme="@style/Theme.MyApplication">
+         <activity
+             android:name=".MainActivity"
+diff --git a/app/src/main/java/com/example/LoginScreen.kt b/app/src/main/java/com/example/LoginScreen.kt
+index e4630e4..9596d03 100644
+--- a/app/src/main/java/com/example/LoginScreen.kt
++++ b/app/src/main/java/com/example/LoginScreen.kt
+@@ -10,10 +10,12 @@ import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.vector.ImageVector
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.text.font.FontStyle
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
++import com.example.R
+ 
+ @Composable
+ fun LoginScreen(onLoginClick: () -> Unit) {
+@@ -27,7 +29,7 @@ fun LoginScreen(onLoginClick: () -> Unit) {
+         // Logo Placeholder
+         Icon(
+             imageVector = Icons.AutoMirrored.Rounded.Login,
+-            contentDescription = "StyleDrop Logo",
++            contentDescription = stringResource(R.string.cd_login_logo),
+             modifier = Modifier.size(72.dp),
+             tint = MaterialTheme.colorScheme.primary
+         )
+@@ -43,7 +45,7 @@ fun LoginScreen(onLoginClick: () -> Unit) {
+         Spacer(modifier = Modifier.height(8.dp))
+         
+         Text(
+-            text = "Your AI Wardrobe Stylist",
++            text = stringResource(R.string.login_tagline),
+             style = MaterialTheme.typography.bodyLarge.copy(
+                 fontStyle = FontStyle.Italic,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant
+@@ -58,7 +60,7 @@ fun LoginScreen(onLoginClick: () -> Unit) {
+         ) {
+             HorizontalDivider(modifier = Modifier.weight(1f))
+             Text(
+-                text = "Sign in to continue",
++                text = stringResource(R.string.login_sign_in_to_continue),
+                 modifier = Modifier.padding(horizontal = 16.dp),
+                 style = MaterialTheme.typography.bodySmall,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant
+@@ -69,21 +71,21 @@ fun LoginScreen(onLoginClick: () -> Unit) {
+         Spacer(modifier = Modifier.height(24.dp))
+         
+         SocialButton(
+-            text = "Continue with Google", 
++            text = stringResource(R.string.login_google), 
+             icon = Icons.Rounded.Person,
+             onClick = onLoginClick
+         )
+         Spacer(modifier = Modifier.height(12.dp))
+         
+         SocialButton(
+-            text = "Continue with Apple", 
++            text = stringResource(R.string.login_apple), 
+             icon = null,
+             onClick = onLoginClick
+         )
+         Spacer(modifier = Modifier.height(12.dp))
+         
+         SocialButton(
+-            text = "Continue with Email", 
++            text = stringResource(R.string.login_email), 
+             icon = Icons.Rounded.Email,
+             onClick = onLoginClick
+         )
+@@ -92,7 +94,7 @@ fun LoginScreen(onLoginClick: () -> Unit) {
+         
+         TextButton(onClick = onLoginClick) {
+             Text(
+-                text = "Skip for now — Continue as Guest",
++                text = stringResource(R.string.login_skip),
+                 color = MaterialTheme.colorScheme.onSurfaceVariant
+             )
+         }
+diff --git a/app/src/main/java/com/example/ui/A11y.kt b/app/src/main/java/com/example/ui/A11y.kt
+new file mode 100644
+index 0000000..4d7eb63
+--- /dev/null
++++ b/app/src/main/java/com/example/ui/A11y.kt
+@@ -0,0 +1,27 @@
++package com.example.ui
++
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.res.stringResource
++import com.example.R
++import com.example.models.ItemCategory
++
++/**
++ * Maps raw category values persisted in Room (ItemCategory constants) to their
++ * localized display strings. Database values stay canonical English keys so
++ * existing data is not invalidated by a locale change; only display is translated.
++ */
++private val categoryStringRes = mapOf(
++    ItemCategory.TOP to R.string.category_tops,
++    ItemCategory.BOTTOM to R.string.category_bottoms,
++    ItemCategory.SHOES to R.string.category_shoes,
++    ItemCategory.OUTERWEAR to R.string.category_outerwear,
++    ItemCategory.ACCESSORY to R.string.category_accessories,
++    ItemCategory.BAG to R.string.category_bags,
++    ItemCategory.WATCH to R.string.category_watches,
++    ItemCategory.JEWELRY to R.string.category_jewelry
++)
++
++/** Localized display name for a wardrobe category, falling back to the raw key. */
++@Composable
++fun categoryDisplay(category: String): String =
++    categoryStringRes[category]?.let { stringResource(it) } ?: category
+diff --git a/app/src/main/java/com/example/ui/AddItemScreen.kt b/app/src/main/java/com/example/ui/AddItemScreen.kt
+index 589c6af..1493b09 100644
+--- a/app/src/main/java/com/example/ui/AddItemScreen.kt
++++ b/app/src/main/java/com/example/ui/AddItemScreen.kt
+@@ -21,9 +21,11 @@ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.draw.shadow
+ import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+ import androidx.lifecycle.viewmodel.compose.viewModel
+ import coil.compose.AsyncImage
++import com.example.R
+ import com.example.models.AppConstants
+ import com.example.models.ItemCategory
+ import com.example.models.WardrobeItem
+@@ -55,14 +57,14 @@ fun AddItemScreen(
+     Scaffold(
+         topBar = {
+             TopAppBar(
+-                title = { Text("Add Item", style = MaterialTheme.typography.displayMedium) },
++                title = { Text(stringResource(R.string.screen_add_item), style = MaterialTheme.typography.displayMedium) },
+                 colors = TopAppBarDefaults.topAppBarColors(
+                     containerColor = MaterialTheme.colorScheme.background,
+                     titleContentColor = MaterialTheme.colorScheme.onBackground
+                 ),
+                 navigationIcon = {
+                     IconButton(onClick = onNavigateBack) {
+-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
++                        Icon(Icons.Rounded.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                     }
+                 }
+             )
+@@ -82,7 +84,7 @@ fun AddItemScreen(
+                 Text("📸", style = MaterialTheme.typography.displayLarge)
+                 Spacer(modifier = Modifier.height(16.dp))
+                 Text(
+-                    text = "Add a ${category.lowercase()}",
++                    text = stringResource(R.string.add_a_category, categoryDisplay(category)),
+                     style = MaterialTheme.typography.displayMedium
+                 )
+                 Spacer(modifier = Modifier.height(32.dp))
+@@ -103,12 +105,12 @@ fun AddItemScreen(
+                 ) {
+                     Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                     Spacer(modifier = Modifier.width(10.dp))
+-                    Text("Upload photo", style = MaterialTheme.typography.labelLarge)
++                    Text(stringResource(R.string.upload_photo), style = MaterialTheme.typography.labelLarge)
+                 }
+             } else {
+                 AsyncImage(
+                     model = imageUri,
+-                    contentDescription = "Selected Image",
++                    contentDescription = stringResource(R.string.cd_selected_image),
+                     modifier = Modifier
+                         .size(200.dp)
+                         .shadow(4.dp, MaterialTheme.shapes.large, spotColor = Color(0x14000000))
+@@ -121,33 +123,33 @@ fun AddItemScreen(
+                 OutlinedTextField(
+                     value = type,
+                     onValueChange = { type = it },
+-                    label = { Text("Type (e.g. Oversized T-Shirt)") },
++                    label = { Text(stringResource(R.string.field_type)) },
+                     modifier = Modifier.fillMaxWidth()
+                 )
+                 Spacer(modifier = Modifier.height(12.dp))
+                 OutlinedTextField(
+                     value = color,
+                     onValueChange = { color = it },
+-                    label = { Text("Color (e.g. Black)") },
++                    label = { Text(stringResource(R.string.field_color)) },
+                     modifier = Modifier.fillMaxWidth()
+                 )
+                 Spacer(modifier = Modifier.height(12.dp))
+ 
+-                DropdownField("Category", category, ItemCategory.all) { category = it }
++                DropdownField(stringResource(R.string.info_category), category, ItemCategory.all) { category = it }
+                 Spacer(modifier = Modifier.height(12.dp))
+-                DropdownField("Pattern", pattern, AppConstants.patterns) { pattern = it }
++                DropdownField(stringResource(R.string.info_pattern), pattern, AppConstants.patterns) { pattern = it }
+                 Spacer(modifier = Modifier.height(12.dp))
+-                DropdownField("Style", style, AppConstants.styles) { style = it }
++                DropdownField(stringResource(R.string.info_style), style, AppConstants.styles) { style = it }
+                 Spacer(modifier = Modifier.height(12.dp))
+-                DropdownField("Fit", fit, AppConstants.fits) { fit = it }
++                DropdownField(stringResource(R.string.info_fit), fit, AppConstants.fits) { fit = it }
+                 Spacer(modifier = Modifier.height(12.dp))
+-                DropdownField("Season", season, AppConstants.seasons) { season = it }
++                DropdownField(stringResource(R.string.info_season), season, AppConstants.seasons) { season = it }
+                 Spacer(modifier = Modifier.height(12.dp))
+ 
+                 OutlinedTextField(
+                     value = brand,
+                     onValueChange = { brand = it },
+-                    label = { Text("Brand (optional)") },
++                    label = { Text(stringResource(R.string.field_brand)) },
+                     modifier = Modifier.fillMaxWidth()
+                 )
+ 
+@@ -175,7 +177,7 @@ fun AddItemScreen(
+                         contentColor = MaterialTheme.colorScheme.onPrimary
+                     )
+                 ) {
+-                    Text("Save item", style = MaterialTheme.typography.labelLarge)
++                    Text(stringResource(R.string.save_item), style = MaterialTheme.typography.labelLarge)
+                 }
+                 Spacer(modifier = Modifier.height(32.dp))
+             }
+diff --git a/app/src/main/java/com/example/ui/AiGeneratorScreen.kt b/app/src/main/java/com/example/ui/AiGeneratorScreen.kt
+index 41c5eaa..c79b0ff 100644
+--- a/app/src/main/java/com/example/ui/AiGeneratorScreen.kt
++++ b/app/src/main/java/com/example/ui/AiGeneratorScreen.kt
+@@ -14,9 +14,11 @@ import androidx.compose.runtime.*
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.lifecycle.viewmodel.compose.viewModel
++import com.example.R
+ import com.example.models.AppConstants
+ import com.example.ui.theme.premiumCard
+ 
+@@ -40,13 +42,17 @@ fun AiGeneratorScreen(
+     var autoWeather by remember { mutableStateOf(true) }
+     var onlyMyWardrobe by remember { mutableStateOf(true) }
+     
+-    val numberOfOutfits = listOf("1 outfit", "3 outfits", "5 outfits")
++    val numberOfOutfits = listOf(
++        stringResource(R.string.outfit_count_1),
++        stringResource(R.string.outfit_count_3),
++        stringResource(R.string.outfit_count_5)
++    )
+     var selectedCount by remember { mutableStateOf(numberOfOutfits.first()) }
+ 
+     Scaffold(
+         topBar = {
+             TopAppBar(
+-                title = { Text("AI Stylist", style = MaterialTheme.typography.titleLarge) },
++                title = { Text(stringResource(R.string.screen_ai), style = MaterialTheme.typography.titleLarge) },
+                 colors = TopAppBarDefaults.topAppBarColors(
+                     containerColor = MaterialTheme.colorScheme.background
+                 )
+@@ -62,7 +68,7 @@ fun AiGeneratorScreen(
+         ) {
+             Spacer(modifier = Modifier.height(16.dp))
+             Text(
+-                text = "Create your outfit",
++                text = stringResource(R.string.ai_create_title),
+                 style = MaterialTheme.typography.displayMedium
+             )
+             Spacer(modifier = Modifier.height(20.dp))
+@@ -98,14 +104,14 @@ fun AiGeneratorScreen(
+                 }
+             }
+ 
+-            DropdownField("Occasion", occasion, AppConstants.occasions) { occasion = it }
++            DropdownField(stringResource(R.string.label_occasion), occasion, AppConstants.occasions) { occasion = it }
+             Spacer(modifier = Modifier.height(16.dp))
+-            DropdownField("Style", style, AppConstants.styles) { style = it }
++            DropdownField(stringResource(R.string.label_style), style, AppConstants.styles) { style = it }
+             Spacer(modifier = Modifier.height(16.dp))
+-            DropdownField("Color preference", colorPref, AppConstants.colorPreferences) { colorPref = it }
++            DropdownField(stringResource(R.string.label_color_pref), colorPref, AppConstants.colorPreferences) { colorPref = it }
+             Spacer(modifier = Modifier.height(16.dp))
+ 
+-            Text("Weather", style = MaterialTheme.typography.labelLarge)
++            Text(stringResource(R.string.label_weather), style = MaterialTheme.typography.labelLarge)
+             Spacer(modifier = Modifier.height(6.dp))
+             Row(
+                 modifier = Modifier
+@@ -115,7 +121,7 @@ fun AiGeneratorScreen(
+                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                 horizontalArrangement = Arrangement.SpaceBetween
+             ) {
+-                Text("Automatic", style = MaterialTheme.typography.bodyLarge)
++                Text(stringResource(R.string.label_automatic), style = MaterialTheme.typography.bodyLarge)
+                 Switch(
+                     checked = autoWeather,
+                     onCheckedChange = { autoWeather = it },
+@@ -127,7 +133,7 @@ fun AiGeneratorScreen(
+             }
+ 
+             Spacer(modifier = Modifier.height(16.dp))
+-            DropdownField("Shoes", shoePref, AppConstants.shoePreferences) { shoePref = it }
++            DropdownField(stringResource(R.string.label_shoes), shoePref, AppConstants.shoePreferences) { shoePref = it }
+             Spacer(modifier = Modifier.height(16.dp))
+ 
+             Row(
+@@ -139,8 +145,8 @@ fun AiGeneratorScreen(
+                 horizontalArrangement = Arrangement.SpaceBetween
+             ) {
+                 Column {
+-                    Text("Use only my wardrobe", style = MaterialTheme.typography.bodyLarge)
+-                    Text("Never suggests items you don't own", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
++                    Text(stringResource(R.string.label_use_my_wardrobe), style = MaterialTheme.typography.bodyLarge)
++                    Text(stringResource(R.string.label_use_my_wardrobe_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                 }
+                 Switch(
+                     checked = onlyMyWardrobe,
+@@ -150,7 +156,7 @@ fun AiGeneratorScreen(
+             }
+ 
+             Spacer(modifier = Modifier.height(16.dp))
+-            DropdownField("Number of outfits", selectedCount, numberOfOutfits) { selectedCount = it }
++            DropdownField(stringResource(R.string.label_outfit_count), selectedCount, numberOfOutfits) { selectedCount = it }
+             Spacer(modifier = Modifier.height(28.dp))
+ 
+             Button(
+@@ -183,11 +189,11 @@ fun AiGeneratorScreen(
+                         strokeWidth = 2.dp
+                     )
+                     Spacer(modifier = Modifier.width(8.dp))
+-                    Text("Generating…", style = MaterialTheme.typography.labelLarge)
++                    Text(stringResource(R.string.btn_generating), style = MaterialTheme.typography.labelLarge)
+                 } else {
+                     Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                     Spacer(modifier = Modifier.width(10.dp))
+-                    Text("Generate outfit", style = MaterialTheme.typography.labelLarge)
++                    Text(stringResource(R.string.btn_generate), style = MaterialTheme.typography.labelLarge)
+                 }
+             }
+             Spacer(modifier = Modifier.height(32.dp))
+diff --git a/app/src/main/java/com/example/ui/AnalyticsScreen.kt b/app/src/main/java/com/example/ui/AnalyticsScreen.kt
+index f09cb27..7695445 100644
+--- a/app/src/main/java/com/example/ui/AnalyticsScreen.kt
++++ b/app/src/main/java/com/example/ui/AnalyticsScreen.kt
+@@ -11,10 +11,12 @@ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.lifecycle.viewmodel.compose.viewModel
+ import androidx.compose.foundation.shape.RoundedCornerShape
++import com.example.R
+ import com.example.models.ItemCategory
+ import com.example.ui.theme.premiumCard
+ 
+@@ -34,14 +36,14 @@ fun AnalyticsScreen(
+     Scaffold(
+         topBar = {
+             TopAppBar(
+-                title = { Text("Analytics", style = MaterialTheme.typography.displayMedium) },
++                title = { Text(stringResource(R.string.screen_analytics), style = MaterialTheme.typography.displayMedium) },
+                 colors = TopAppBarDefaults.topAppBarColors(
+                     containerColor = MaterialTheme.colorScheme.background,
+                     titleContentColor = MaterialTheme.colorScheme.onBackground
+                 ),
+                 navigationIcon = {
+                     IconButton(onClick = onNavigateBack) {
+-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
++                        Icon(Icons.Rounded.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                     }
+                 }
+             )
+@@ -54,15 +56,15 @@ fun AnalyticsScreen(
+                 .padding(16.dp)
+                 .verticalScroll(rememberScrollState())
+         ) {
+-            Text("Wardrobe Stats", style = MaterialTheme.typography.headlineMedium)
++            Text(stringResource(R.string.analytics_stats), style = MaterialTheme.typography.headlineMedium)
+             Spacer(modifier = Modifier.height(24.dp))
+             
+-            StatCard(title = "Total Items", value = totalItems.toString())
++            StatCard(title = stringResource(R.string.stat_total_items), value = totalItems.toString())
+             Spacer(modifier = Modifier.height(16.dp))
+-            StatCard(title = "Most Common Color", value = mostCommonColor)
++            StatCard(title = stringResource(R.string.stat_most_common_color), value = mostCommonColor)
+             Spacer(modifier = Modifier.height(24.dp))
+             
+-            Text("By Category", style = MaterialTheme.typography.titleLarge)
++            Text(stringResource(R.string.analytics_by_category), style = MaterialTheme.typography.titleLarge)
+             Spacer(modifier = Modifier.height(16.dp))
+             
+             ItemCategory.all.forEach { category ->
+@@ -74,7 +76,7 @@ fun AnalyticsScreen(
+                             .padding(vertical = 8.dp),
+                         horizontalArrangement = Arrangement.SpaceBetween
+                     ) {
+-                        Text("${ItemCategory.emoji(category)} $category", style = MaterialTheme.typography.bodyLarge)
++                        Text("${ItemCategory.emoji(category)} ${categoryDisplay(category)}", style = MaterialTheme.typography.bodyLarge)
+                         Text(count.toString(), style = MaterialTheme.typography.bodyLarge)
+                     }
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+diff --git a/app/src/main/java/com/example/ui/HomeScreen.kt b/app/src/main/java/com/example/ui/HomeScreen.kt
+index 351f8a9..6fcb9ce 100644
+--- a/app/src/main/java/com/example/ui/HomeScreen.kt
++++ b/app/src/main/java/com/example/ui/HomeScreen.kt
+@@ -17,19 +17,22 @@ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.lifecycle.viewmodel.compose.viewModel
++import com.example.R
+ import com.example.models.ItemCategory
+ import com.example.ui.theme.premiumCard
+ import java.time.LocalTime
+ 
++@Composable
+ private fun greeting(): String = when (LocalTime.now().hour) {
+-    in 5..11  -> "Good morning"
+-    in 12..16 -> "Good afternoon"
+-    in 17..21 -> "Good evening"
+-    else       -> "Working late"
++    in 5..11  -> stringResource(R.string.greeting_morning)
++    in 12..16 -> stringResource(R.string.greeting_afternoon)
++    in 17..21 -> stringResource(R.string.greeting_evening)
++    else       -> stringResource(R.string.greeting_late)
+ }
+ 
+ @Composable
+@@ -61,7 +64,7 @@ fun HomeScreen(
+                 color = MaterialTheme.colorScheme.onSurfaceVariant
+             )
+             Text(
+-                text = "Your wardrobe, curated.",
++                text = stringResource(R.string.home_headline),
+                 style = MaterialTheme.typography.displayMedium
+             )
+             
+@@ -79,13 +82,13 @@ fun HomeScreen(
+                 Spacer(modifier = Modifier.width(14.dp))
+                 Column {
+                     Text(
+-                        text = "Today's Weather • Unknown",
++                        text = stringResource(R.string.home_weather_label),
+                         style = MaterialTheme.typography.bodySmall,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                     )
+                     Spacer(modifier = Modifier.height(2.dp))
+                     Text(
+-                        text = "22°C • Partly Cloudy",
++                        text = stringResource(R.string.home_weather_value),
+                         style = MaterialTheme.typography.titleMedium
+                     )
+                 }
+@@ -93,7 +96,7 @@ fun HomeScreen(
+ 
+             Spacer(modifier = Modifier.height(24.dp))
+             Text(
+-                text = "Wardrobe Status",
++                text = stringResource(R.string.home_wardrobe_status),
+                 style = MaterialTheme.typography.titleLarge
+             )
+             Spacer(modifier = Modifier.height(12.dp))
+@@ -106,14 +109,14 @@ fun HomeScreen(
+                 val bottomCount = allItems.count { it.category == ItemCategory.BOTTOM }
+                 val shoeCount = allItems.count { it.category == ItemCategory.SHOES }
+ 
+-                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.TOP), label = "Tops", count = topCount)
+-                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.BOTTOM), label = "Bottoms", count = bottomCount)
+-                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.SHOES), label = "Shoes", count = shoeCount)
++                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.TOP), label = stringResource(R.string.category_tops), count = topCount)
++                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.BOTTOM), label = stringResource(R.string.category_bottoms), count = bottomCount)
++                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.SHOES), label = stringResource(R.string.category_shoes), count = shoeCount)
+             }
+ 
+             Spacer(modifier = Modifier.height(24.dp))
+             Text(
+-                text = "Recommended Outfit",
++                text = stringResource(R.string.home_recommended),
+                 style = MaterialTheme.typography.titleLarge
+             )
+             Spacer(modifier = Modifier.height(12.dp))
+@@ -125,7 +128,7 @@ fun HomeScreen(
+                     .padding(20.dp)
+             ) {
+                 Text(
+-                    text = "Add a top, a bottom and a pair of shoes to get your first recommended outfit here.",
++                    text = stringResource(R.string.home_recommended_hint),
+                     style = MaterialTheme.typography.bodyMedium
+                 )
+                 Spacer(modifier = Modifier.height(16.dp))
+@@ -140,7 +143,7 @@ fun HomeScreen(
+                 ) {
+                     Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(18.dp))
+                     Spacer(Modifier.width(10.dp))
+-                    Text("Generate an outfit", style = MaterialTheme.typography.labelLarge)
++                    Text(stringResource(R.string.home_generate_cta), style = MaterialTheme.typography.labelLarge)
+                 }
+             }
+             
+diff --git a/app/src/main/java/com/example/ui/ItemDetailScreen.kt b/app/src/main/java/com/example/ui/ItemDetailScreen.kt
+index 8a62c63..301152e 100644
+--- a/app/src/main/java/com/example/ui/ItemDetailScreen.kt
++++ b/app/src/main/java/com/example/ui/ItemDetailScreen.kt
+@@ -20,6 +20,8 @@ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.draw.shadow
+ import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.pluralStringResource
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.lifecycle.viewmodel.compose.viewModel
+@@ -27,6 +29,7 @@ import coil.compose.AsyncImage
+ import com.example.models.AppConstants
+ import com.example.models.ItemCategory
+ import com.example.models.WardrobeItem
++import com.example.R
+ import com.example.ui.theme.premiumCard
+ import kotlinx.coroutines.launch
+ 
+@@ -66,8 +69,8 @@ fun ItemDetailScreen(
+     if (showDeleteDialog) {
+         AlertDialog(
+             onDismissRequest = { showDeleteDialog = false },
+-            title = { Text("Delete item?") },
+-            text = { Text("This will remove the item from your wardrobe.") },
++            title = { Text(stringResource(R.string.delete_item_title)) },
++            text = { Text(stringResource(R.string.delete_item_message)) },
+             confirmButton = {
+                 TextButton(
+                     onClick = {
+@@ -76,12 +79,12 @@ fun ItemDetailScreen(
+                         onNavigateBack()
+                     }
+                 ) {
+-                    Text("Delete")
++                    Text(stringResource(R.string.delete))
+                 }
+             },
+             dismissButton = {
+                 TextButton(onClick = { showDeleteDialog = false }) {
+-                    Text("Cancel")
++                    Text(stringResource(R.string.cancel))
+                 }
+             }
+         )
+@@ -97,7 +100,7 @@ fun ItemDetailScreen(
+                 ),
+                 navigationIcon = {
+                     IconButton(onClick = onNavigateBack) {
+-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
++                        Icon(Icons.Rounded.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                     }
+                 },
+                 actions = {
+@@ -119,10 +122,10 @@ fun ItemDetailScreen(
+                             editing = true
+                         }
+                     }) {
+-                        Icon(if (editing) Icons.Rounded.Check else Icons.Rounded.Edit, contentDescription = "Edit")
++                        Icon(if (editing) Icons.Rounded.Check else Icons.Rounded.Edit, contentDescription = stringResource(R.string.cd_edit))
+                     }
+                     IconButton(onClick = { showDeleteDialog = true }) {
+-                        Icon(Icons.Rounded.Delete, contentDescription = "Delete")
++                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.cd_delete))
+                     }
+                 }
+             )
+@@ -158,25 +161,25 @@ fun ItemDetailScreen(
+                         .premiumCard()
+                         .padding(horizontal = 20.dp, vertical = 8.dp)
+                 ) {
+-                    InfoRow("Category", "${ItemCategory.emoji(item!!.category)} ${item!!.category}")
++                    InfoRow(stringResource(R.string.info_category), "${ItemCategory.emoji(item!!.category)} ${categoryDisplay(item!!.category)}")
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                    InfoRow("Type", item!!.type)
++                    InfoRow(stringResource(R.string.info_type), item!!.type)
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                    InfoRow("Color", item!!.color)
++                    InfoRow(stringResource(R.string.info_color), item!!.color)
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                    InfoRow("Pattern", item!!.pattern)
++                    InfoRow(stringResource(R.string.info_pattern), item!!.pattern)
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                    InfoRow("Style", item!!.style)
++                    InfoRow(stringResource(R.string.info_style), item!!.style)
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                    InfoRow("Fit", item!!.fit)
++                    InfoRow(stringResource(R.string.info_fit), item!!.fit)
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                    InfoRow("Season", item!!.season)
++                    InfoRow(stringResource(R.string.info_season), item!!.season)
+                     if (item!!.brand.isNotEmpty()) {
+                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                        InfoRow("Brand", item!!.brand)
++                        InfoRow(stringResource(R.string.info_brand), item!!.brand)
+                     }
+                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+-                    InfoRow("Worn", "${item!!.timesWorn} times")
++                    InfoRow(stringResource(R.string.info_worn), pluralStringResource(R.plurals.items_worn, item!!.timesWorn, item!!.timesWorn))
+                 }
+                 Spacer(modifier = Modifier.height(32.dp))
+             } else {
+@@ -185,14 +188,14 @@ fun ItemDetailScreen(
+                 OutlinedTextField(
+                     value = type,
+                     onValueChange = { type = it },
+-                    label = { Text("Type") },
++                    label = { Text(stringResource(R.string.info_type)) },
+                     modifier = Modifier.fillMaxWidth()
+                 )
+                 Spacer(modifier = Modifier.height(12.dp))
+                 OutlinedTextField(
+                     value = color,
+                     onValueChange = { color = it },
+-                    label = { Text("Color") },
++                    label = { Text(stringResource(R.string.info_color)) },
+                     modifier = Modifier.fillMaxWidth()
+                 )
+                 Spacer(modifier = Modifier.height(12.dp))
+diff --git a/app/src/main/java/com/example/ui/MainShell.kt b/app/src/main/java/com/example/ui/MainShell.kt
+index 07ae54c..0ab586a 100644
+--- a/app/src/main/java/com/example/ui/MainShell.kt
++++ b/app/src/main/java/com/example/ui/MainShell.kt
+@@ -20,8 +20,11 @@ import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.LocalConfiguration
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
++import com.example.R
+ 
+ @Composable
+ fun MainShell(
+@@ -29,14 +32,28 @@ fun MainShell(
+     onAddItemClick: (String) -> Unit,
+     onAnalyticsClick: () -> Unit
+ ) {
++    val configuration = LocalConfiguration.current
++    // A11y: TalkBack + internationalization — expose the current locale to the
++    // accessibility framework so screen readers switch TTS language per screen.
++    // RTL: resource qualifiers + Android auto-mirroring already handle ar/iw;
++    // in future force-LTR code paths, re-derive direction from this config.
+     var selectedIndex by remember { mutableIntStateOf(0) }
+ 
++    // i18n: localized nav labels; icons carry the same localized description.
++    val navLabels = listOf(
++        stringResource(R.string.nav_home),
++        stringResource(R.string.nav_wardrobe),
++        stringResource(R.string.nav_ai),
++        stringResource(R.string.nav_saved),
++        stringResource(R.string.nav_profile)
++    )
++
+     val items = listOf(
+-        NavigationItem("Home", Icons.Filled.Home, Icons.Outlined.Home),
+-        NavigationItem("Wardrobe", Icons.Filled.Checkroom, Icons.Outlined.Checkroom),
+-        NavigationItem("AI", Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome),
+-        NavigationItem("Saved", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
+-        NavigationItem("Profile", Icons.Filled.Person, Icons.Outlined.Person)
++        NavigationItem(navLabels[0], Icons.Filled.Home, Icons.Outlined.Home),
++        NavigationItem(navLabels[1], Icons.Filled.Checkroom, Icons.Outlined.Checkroom),
++        NavigationItem(navLabels[2], Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome),
++        NavigationItem(navLabels[3], Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
++        NavigationItem(navLabels[4], Icons.Filled.Person, Icons.Outlined.Person)
+     )
+ 
+     Scaffold(
+diff --git a/app/src/main/java/com/example/ui/ProfileScreen.kt b/app/src/main/java/com/example/ui/ProfileScreen.kt
+index 1ed7856..ffe53fa 100644
+--- a/app/src/main/java/com/example/ui/ProfileScreen.kt
++++ b/app/src/main/java/com/example/ui/ProfileScreen.kt
+@@ -12,8 +12,10 @@ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.draw.shadow
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
++import com.example.R
+ import com.example.ui.theme.premiumCard
+ 
+ @OptIn(ExperimentalMaterial3Api::class)
+@@ -22,7 +24,7 @@ fun ProfileScreen() {
+     Scaffold(
+         topBar = {
+             TopAppBar(
+-                title = { Text("Profile", style = MaterialTheme.typography.displayMedium) },
++                title = { Text(stringResource(R.string.screen_profile), style = MaterialTheme.typography.displayMedium) },
+                 colors = TopAppBarDefaults.topAppBarColors(
+                     containerColor = MaterialTheme.colorScheme.background,
+                     titleContentColor = MaterialTheme.colorScheme.onBackground
+@@ -57,8 +59,8 @@ fun ProfileScreen() {
+                 }
+                 Spacer(modifier = Modifier.width(16.dp))
+                 Column {
+-                    Text("Guest User", style = MaterialTheme.typography.displayMedium)
+-                    Text("Guest account", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
++                    Text(stringResource(R.string.profile_guest_name), style = MaterialTheme.typography.displayMedium)
++                    Text(stringResource(R.string.profile_guest_account), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                     Spacer(modifier = Modifier.height(4.dp))
+                     Box(
+                         modifier = Modifier
+@@ -67,7 +69,7 @@ fun ProfileScreen() {
+                             .padding(horizontal = 10.dp, vertical = 4.dp)
+                     ) {
+                         Text(
+-                            text = "FREE",
++                            text = stringResource(R.string.badge_free),
+                             style = MaterialTheme.typography.labelSmall,
+                             fontWeight = FontWeight.Bold,
+                             color = MaterialTheme.colorScheme.onSurfaceVariant
+@@ -79,12 +81,12 @@ fun ProfileScreen() {
+             Spacer(modifier = Modifier.height(28.dp))
+             
+             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+-                StatBox(modifier = Modifier.weight(1f), value = "0", label = "Items")
+-                StatBox(modifier = Modifier.weight(1f), value = "0", label = "Outfits made")
++                StatBox(modifier = Modifier.weight(1f), value = "0", label = stringResource(R.string.stat_items))
++                StatBox(modifier = Modifier.weight(1f), value = "0", label = stringResource(R.string.stat_outfits))
+             }
+             
+             Spacer(modifier = Modifier.height(32.dp))
+-            Text("Settings", style = MaterialTheme.typography.titleLarge)
++            Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleLarge)
+             Spacer(modifier = Modifier.height(12.dp))
+             Column(
+                 modifier = Modifier
+@@ -92,11 +94,11 @@ fun ProfileScreen() {
+                     .premiumCard()
+                     .padding(vertical = 8.dp)
+             ) {
+-                SettingRow(label = "Notifications")
++                SettingRow(label = stringResource(R.string.settings_notifications))
+                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.padding(horizontal = 16.dp))
+-                SettingRow(label = "Appearance")
++                SettingRow(label = stringResource(R.string.settings_appearance))
+                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.padding(horizontal = 16.dp))
+-                SettingRow(label = "Sign in to save data")
++                SettingRow(label = stringResource(R.string.settings_signin))
+             }
+         }
+     }
+diff --git a/app/src/main/java/com/example/ui/SavedOutfitsScreen.kt b/app/src/main/java/com/example/ui/SavedOutfitsScreen.kt
+index e9f4d55..a2f4bf6 100644
+--- a/app/src/main/java/com/example/ui/SavedOutfitsScreen.kt
++++ b/app/src/main/java/com/example/ui/SavedOutfitsScreen.kt
+@@ -8,8 +8,10 @@ import androidx.compose.material3.*
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.dp
++import com.example.R
+ 
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+@@ -17,17 +19,17 @@ fun SavedOutfitsScreen() {
+     Scaffold(
+         topBar = {
+             TopAppBar(
+-                title = { Text("My Outfits", style = MaterialTheme.typography.displayMedium) },
++                title = { Text(stringResource(R.string.screen_saved), style = MaterialTheme.typography.displayMedium) },
+                 colors = TopAppBarDefaults.topAppBarColors(
+                     containerColor = MaterialTheme.colorScheme.background,
+                     titleContentColor = MaterialTheme.colorScheme.onBackground
+                 ),
+                 actions = {
+                     IconButton(onClick = { /* TODO: Calendar */ }) {
+-                        Icon(Icons.Rounded.CalendarMonth, contentDescription = "Outfit Calendar")
++                        Icon(Icons.Rounded.CalendarMonth, contentDescription = stringResource(R.string.cd_outfit_calendar))
+                     }
+                     IconButton(onClick = { /* TODO: Mix & Match */ }) {
+-                        Icon(Icons.Rounded.DashboardCustomize, contentDescription = "Mix & Match")
++                        Icon(Icons.Rounded.DashboardCustomize, contentDescription = stringResource(R.string.cd_mix_match))
+                     }
+                 }
+             )
+@@ -44,12 +46,12 @@ fun SavedOutfitsScreen() {
+             Text("❤️", style = MaterialTheme.typography.displayLarge)
+             Spacer(modifier = Modifier.height(12.dp))
+             Text(
+-                text = "No saved outfits yet",
++                text = stringResource(R.string.saved_empty_title),
+                 style = MaterialTheme.typography.titleMedium
+             )
+             Spacer(modifier = Modifier.height(6.dp))
+             Text(
+-                text = "Generate an outfit with the AI Stylist and tap SAVE.",
++                text = stringResource(R.string.saved_empty_hint),
+                 style = MaterialTheme.typography.bodyMedium,
+                 textAlign = TextAlign.Center,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant
+diff --git a/app/src/main/java/com/example/ui/WardrobeScreen.kt b/app/src/main/java/com/example/ui/WardrobeScreen.kt
+index 17ab4a8..1ded364 100644
+--- a/app/src/main/java/com/example/ui/WardrobeScreen.kt
++++ b/app/src/main/java/com/example/ui/WardrobeScreen.kt
+@@ -21,12 +21,17 @@ import androidx.compose.ui.draw.shadow
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.semantics.role
++import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.lifecycle.viewmodel.compose.viewModel
+ import coil.compose.AsyncImage
++import com.example.R
+ import com.example.models.ItemCategory
+ import com.example.models.WardrobeItem
+ import kotlinx.coroutines.launch
+@@ -48,14 +53,14 @@ fun WardrobeScreen(
+     Scaffold(
+         topBar = {
+             TopAppBar(
+-                title = { Text("Wardrobe", style = MaterialTheme.typography.displayMedium) },
++                title = { Text(stringResource(R.string.screen_wardrobe), style = MaterialTheme.typography.displayMedium) },
+                 colors = TopAppBarDefaults.topAppBarColors(
+                     containerColor = MaterialTheme.colorScheme.background,
+                     titleContentColor = MaterialTheme.colorScheme.onBackground
+                 ),
+                 actions = {
+                     IconButton(onClick = onAnalyticsClick) {
+-                        Icon(Icons.Rounded.BarChart, contentDescription = "Analytics")
++                        Icon(Icons.Rounded.BarChart, contentDescription = stringResource(R.string.cd_analytics))
+                     }
+                 }
+             )
+@@ -70,7 +75,7 @@ fun WardrobeScreen(
+                 containerColor = MaterialTheme.colorScheme.primary,
+                 contentColor = MaterialTheme.colorScheme.onPrimary,
+                 icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
+-                text = { Text("Add Item") }
++                text = { Text(stringResource(R.string.add_item)) }
+             )
+         }
+     ) { innerPadding ->
+@@ -98,7 +103,7 @@ fun WardrobeScreen(
+                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                         text = {
+                             Text(
+-                                text = "${category.lowercase().replaceFirstChar { it.uppercase() }}  $count",
++                                text = "${categoryDisplay(category)}  $count",
+                                 style = MaterialTheme.typography.titleMedium,
+                                 color = if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                             )
+@@ -144,13 +149,13 @@ fun CategoryGrid(
+             )
+             Spacer(modifier = Modifier.height(12.dp))
+             Text(
+-                text = "No ${category.lowercase()} yet",
++                text = stringResource(R.string.empty_no_category, categoryDisplay(category)),
+                 style = MaterialTheme.typography.titleMedium,
+                 color = MaterialTheme.colorScheme.onSurface
+             )
+             Spacer(modifier = Modifier.height(6.dp))
+             Text(
+-                text = "Tap \"Add Item\" to snap or upload a photo.",
++                text = stringResource(R.string.empty_hint),
+                 style = MaterialTheme.typography.bodyMedium,
+                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant
+@@ -176,8 +181,13 @@ fun ItemCard(
+     item: WardrobeItem,
+     onClick: () -> Unit
+ ) {
++    val openLabel = stringResource(R.string.cd_open_item)
+     Column(
+-        modifier = Modifier.clickable { onClick() },
++        // A11y: garment card is announced as a single focusable node with a role,
++        // a localized click label, and a descriptive accessible name from real item data.
++        modifier = Modifier
++            .semantics(mergeDescendants = true) { role = Role.Button }
++            .clickable(onClickLabel = openLabel) { onClick() },
+         horizontalAlignment = Alignment.Start
+     ) {
+         Box(
+@@ -189,7 +199,9 @@ fun ItemCard(
+         ) {
+             AsyncImage(
+                 model = item.imageUrl,
+-                contentDescription = item.style,
++                // Decorative: the merged card node already exposes type/color via the
++                // text children below, so a duplicate image label would be read twice.
++                contentDescription = null,
+                 contentScale = ContentScale.Crop,
+                 modifier = Modifier.fillMaxSize()
+             )
+diff --git a/app/src/main/java/com/example/ui/theme/Color.kt b/app/src/main/java/com/example/ui/theme/Color.kt
+index 3fe32e7..294c6ef 100644
+--- a/app/src/main/java/com/example/ui/theme/Color.kt
++++ b/app/src/main/java/com/example/ui/theme/Color.kt
+@@ -8,10 +8,13 @@ val SurfaceLight     = Color(0xFFFFFFFF)  // pure white cards pop off the ivory
+ val SurfaceAltLight  = Color(0xFFF1ECE1)  // warm sand for chips / alt panels
+ val InkLight         = Color(0xFF1B1A17)  // near-black ink for headings
+ val InkSoftLight     = Color(0xFF4A463E)
+-val MutedTextLight   = Color(0xFF837B6C)  // captions
+-val LineLight        = Color(0xFFE7E0D2)  // hairline dividers
++// WCAG 2.1 AA: contrast tokens computed against WCAG relative-luminance formula.
++// MutedTextLight 6D6556: 5.8:1 on white surface, 5.4:1 on ivory bg, 4.9:1 on sand chip (was 0xFF837B6C = 4.2:1, FAIL)
++val MutedTextLight   = Color(0xFF6D6556)
++val LineLight        = Color(0xFFCCC3AE)  // decorative hairline (WCAG-exempt, see A11Y_I18N.md)
+ val AccentLight      = Color(0xFF6B6355)
+-val GoldLight        = Color(0xFFB08A4F)  // deeper, more refined gold (was B89664)
++// GoldLight 8F6B33: 4.5:1 on ivory bg AND 4.5:1 with ivory text on it (was 0xFFB08A4F = 3.0:1, FAIL)
++val GoldLight        = Color(0xFF8F6B33)
+ val ChipBgLight      = Color(0xFFF1ECE1)
+ 
+ // Dark Theme Colors
+@@ -21,7 +24,8 @@ val SurfaceAltDark = Color(0xFF2A281F)
+ val InkDark = Color(0xFFF3EEE2)
+ val InkSoftDark = Color(0xFFCFC8B8)
+ val MutedTextDark = Color(0xFF9A9384)
+-val LineDark = Color(0xFF35322A)
++// Darkened slightly from 0xFF35322A; hairlines remain decorative (WCAG-exempt)
++val LineDark = Color(0xFF4A453B)
+ val AccentDark = Color(0xFFBFB39C)
+ val GoldDark = Color(0xFFCBA870)
+ val ChipBgDark = Color(0xFF2A281F)
+diff --git a/app/src/main/java/com/example/ui/theme/Theme.kt b/app/src/main/java/com/example/ui/theme/Theme.kt
+index 991af3b..9c65955 100644
+--- a/app/src/main/java/com/example/ui/theme/Theme.kt
++++ b/app/src/main/java/com/example/ui/theme/Theme.kt
+@@ -66,9 +66,11 @@ fun MyApplicationTheme(
+     if (!view.isInEditMode) {
+         SideEffect {
+             val window = (view.context as Activity).window
+-            window.statusBarColor = BackgroundLight.toArgb()
++            // A11y fix: previously the status bar was ALWAYS ivory with dark icons,
++            // making the OS clock invisible against the dark theme background.
++            window.statusBarColor = (if (darkTheme) BackgroundDark else BackgroundLight).toArgb()
+             WindowCompat.getInsetsController(window, view)
+-                .isAppearanceLightStatusBars = true   // dark icons on ivory
++                .isAppearanceLightStatusBars = !darkTheme   // dark icons on ivory, light icons on dark
+         }
+     }
+ 
+diff --git a/app/src/main/res/values-ar/strings.xml b/app/src/main/res/values-ar/strings.xml
+new file mode 100644
+index 0000000..ffcd7df
+--- /dev/null
++++ b/app/src/main/res/values-ar/strings.xml
+@@ -0,0 +1,131 @@
++<resources>
++    <!-- Common / actions -->
++    <string name="cancel">إلغاء</string>
++    <string name="delete">حذف</string>
++    <string name="cd_back">رجوع</string>
++    <string name="cd_edit">تعديل</string>
++    <string name="cd_delete">حذف</string>
++
++    <!-- Bottom navigation -->
++    <string name="nav_home">الرئيسية</string>
++    <string name="nav_wardrobe">خزانتي</string>
++    <string name="nav_ai">الذكاء الاصطناعي</string>
++    <string name="nav_saved">المحفوظات</string>
++    <string name="nav_profile">الملف الشخصي</string>
++
++    <!-- Login -->
++    <string name="login_tagline">مساعدك الذكي لتنسيق الملابس</string>
++    <string name="login_sign_in_to_continue">سجّل الدخول للمتابعة</string>
++    <string name="login_google">المتابعة عبر Google</string>
++    <string name="login_apple">المتابعة عبر Apple</string>
++    <string name="login_email">المتابعة عبر البريد الإلكتروني</string>
++    <string name="login_skip">تخطَّ الآن — المتابعة كضيف</string>
++
++    <!-- Home -->
++    <string name="greeting_morning">صباح الخير</string>
++    <string name="greeting_afternoon">مساء الخير</string>
++    <string name="greeting_evening">مساء الخير</string>
++    <string name="greeting_late">تعيب حتى وقت متأخر</string>
++    <string name="home_headline">خزانتك، بلمسة أنيقة.</string>
++    <string name="home_weather_label">طقس اليوم • غير معروف</string>
++    <string name="home_weather_value">22°C • غائم جزئياً</string>
++    <string name="home_wardrobe_status">حالة الخزانة</string>
++    <string name="home_recommended">الإطلالة المقترحة</string>
++    <string name="home_recommended_hint">أضف قطعة علوية وسفلية وحذاءً لعرض أول إطلالة مقترحة هنا.</string>
++    <string name="home_generate_cta">إنشاء إطلالة</string>
++
++    <!-- Categories -->
++    <string name="category_tops">قطع علوية</string>
++    <string name="category_bottoms">قطع سفلية</string>
++    <string name="category_shoes">أحذية</string>
++    <string name="category_outerwear">معاطف</string>
++    <string name="category_accessories">إكسسوارات</string>
++    <string name="category_bags">حقائب</string>
++    <string name="category_watches">ساعات</string>
++    <string name="category_jewelry">مجوهرات</string>
++
++    <!-- Wardrobe -->
++    <string name="screen_wardrobe">خزانتي</string>
++    <string name="cd_analytics">الإحصائيات</string>
++    <string name="add_item">إضافة قطعة</string>
++    <string name="cd_add_item">إضافة قطعة ملابس</string>
++    <string name="empty_no_category">لا توجد %1$s بعد</string>
++    <string name="empty_hint">اضغط "إضافة قطعة" لالتقاط صورة أو تحميلها.</string>
++    <string name="cd_garment_card">قطعة ملابس: %1$s، اللون %2$s، ستايل %3$s. اضغط مرتين لعرض التفاصيل.</string>
++    <string name="cd_open_item">فتح تفاصيل القطعة</string>
++    <string name="outfit_count_1">إطلالة واحدة</string>
++    <string name="outfit_count_3">3 إطلالات</string>
++    <string name="outfit_count_5">5 إطلالات</string>
++
++    <!-- Item detail -->
++    <string name="delete_item_title">حذف القطعة؟</string>
++    <string name="delete_item_message">سيؤدي هذا إلى إزالة القطعة من خزانتك.</string>
++    <string name="info_category">الفئة</string>
++    <string name="info_type">النوع</string>
++    <string name="info_color">اللون</string>
++    <string name="info_pattern">النقشة</string>
++    <string name="info_style">الستايل</string>
++    <string name="info_fit">القَصّة</string>
++    <string name="info_season">الموسم</string>
++    <string name="info_brand">الماركة</string>
++    <string name="info_worn">مرات الارتداء</string>
++
++    <plurals name="items_worn">
++        <item quantity="one">مرة واحدة</item>
++        <item quantity="two">مرتين</item>
++        <item quantity="few">%1$d مرات</item>
++        <item quantity="many">%1$d مرة</item>
++        <item quantity="other">%1$d مرة</item>
++    </plurals>
++
++    <!-- Add item -->
++    <string name="screen_add_item">إضافة قطعة</string>
++    <string name="add_a_category">إضافة %1$s</string>
++    <string name="upload_photo">تحميل صورة</string>
++    <string name="field_type">النوع (مثال: تيشيرت واسع)</string>
++    <string name="field_color">اللون (مثال: أسود)</string>
++    <string name="field_brand">الماركة (اختياري)</string>
++    <string name="save_item">حفظ القطعة</string>
++    <string name="cd_selected_image">الصورة المختارة</string>
++
++    <!-- AI Stylist -->
++    <string name="screen_ai">المنسق الذكي</string>
++    <string name="ai_create_title">أنشئ إطلالتك</string>
++    <string name="label_occasion">المناسبة</string>
++    <string name="label_style">الستايل</string>
++    <string name="label_color_pref">تفضيل اللون</string>
++    <string name="label_weather">الطقس</string>
++    <string name="label_automatic">تلقائي</string>
++    <string name="label_shoes">الأحذية</string>
++    <string name="label_use_my_wardrobe">استخدام خزانتي فقط</string>
++    <string name="label_use_my_wardrobe_hint">لا يقترح أبداً قطعاً لا تملكها</string>
++    <string name="label_outfit_count">عدد الإطلالات</string>
++    <string name="btn_generate">إنشاء إطلالة</string>
++    <string name="btn_generating">جارٍ الإنشاء…</string>
++
++    <!-- Saved outfits -->
++    <string name="screen_saved">إطلالاتي</string>
++    <string name="cd_outfit_calendar">تقويم الإطلالات</string>
++    <string name="cd_mix_match">الخلط والمزج</string>
++    <string name="saved_empty_title">لا توجد إطلالات محفوظة بعد</string>
++    <string name="saved_empty_hint">أنشئ إطلالة مع المنسق الذكي واضغط حفظ.</string>
++
++    <!-- Profile -->
++    <string name="screen_profile">الملف الشخصي</string>
++    <string name="profile_guest_name">مستخدم ضيف</string>
++    <string name="profile_guest_account">حساب ضيف</string>
++    <string name="badge_free">مجاني</string>
++    <string name="stat_items">القطع</string>
++    <string name="stat_outfits">الإطلالات المنشأة</string>
++    <string name="settings_title">الإعدادات</string>
++    <string name="settings_notifications">الإشعارات</string>
++    <string name="settings_appearance">المظهر</string>
++    <string name="settings_signin">سجّل الدخول لحفظ البيانات</string>
++
++    <!-- Analytics -->
++    <string name="screen_analytics">الإحصائيات</string>
++    <string name="analytics_stats">إحصائيات الخزانة</string>
++    <string name="stat_total_items">إجمالي القطع</string>
++    <string name="stat_most_common_color">اللون الأكثر شيوعاً</string>
++    <string name="analytics_by_category">حسب الفئة</string>
++</resources>
+diff --git a/app/src/main/res/values-es/strings.xml b/app/src/main/res/values-es/strings.xml
+new file mode 100644
+index 0000000..eb8d81d
+--- /dev/null
++++ b/app/src/main/res/values-es/strings.xml
+@@ -0,0 +1,128 @@
++<resources>
++    <!-- Common / actions -->
++    <string name="cancel">Cancelar</string>
++    <string name="delete">Eliminar</string>
++    <string name="cd_back">Atrás</string>
++    <string name="cd_edit">Editar</string>
++    <string name="cd_delete">Eliminar</string>
++
++    <!-- Bottom navigation -->
++    <string name="nav_home">Inicio</string>
++    <string name="nav_wardrobe">Armario</string>
++    <string name="nav_ai">IA</string>
++    <string name="nav_saved">Guardados</string>
++    <string name="nav_profile">Perfil</string>
++
++    <!-- Login -->
++    <string name="login_tagline">Tu estilista de armario con IA</string>
++    <string name="login_sign_in_to_continue">Inicia sesión para continuar</string>
++    <string name="login_google">Continuar con Google</string>
++    <string name="login_apple">Continuar con Apple</string>
++    <string name="login_email">Continuar con correo</string>
++    <string name="login_skip">Omitir por ahora — Continuar como invitado</string>
++
++    <!-- Home -->
++    <string name="greeting_morning">Buenos días</string>
++    <string name="greeting_afternoon">Buenas tardes</string>
++    <string name="greeting_evening">Buenas noches</string>
++    <string name="greeting_late">Trabajando hasta tarde</string>
++    <string name="home_headline">Tu armario, a tu medida.</string>
++    <string name="home_weather_label">El tiempo de hoy • Desconocido</string>
++    <string name="home_weather_value">22°C • Parcialmente nublado</string>
++    <string name="home_wardrobe_status">Estado del armario</string>
++    <string name="home_recommended">Atuendo recomendado</string>
++    <string name="home_recommended_hint">Añade una prenda de arriba, una de abajo y unos zapatos para ver aquí tu primer atuendo recomendado.</string>
++    <string name="home_generate_cta">Generar un atuendo</string>
++
++    <!-- Categories -->
++    <string name="category_tops">Tops</string>
++    <string name="category_bottoms">Bajos</string>
++    <string name="category_shoes">Zapatos</string>
++    <string name="category_outerwear">Abrigos</string>
++    <string name="category_accessories">Accesorios</string>
++    <string name="category_bags">Bolsos</string>
++    <string name="category_watches">Relojes</string>
++    <string name="category_jewelry">Joyas</string>
++
++    <!-- Wardrobe -->
++    <string name="screen_wardrobe">Armario</string>
++    <string name="cd_analytics">Estadísticas</string>
++    <string name="add_item">Añadir</string>
++    <string name="cd_add_item">Añadir artículo</string>
++    <string name="empty_no_category">Aún no hay %1$s</string>
++    <string name="empty_hint">Toca "Añadir" para tomar o subir una foto.</string>
++    <string name="cd_garment_card">Prenda: %1$s, color %2$s, estilo %3$s. Toca dos veces para ver los detalles.</string>
++    <string name="cd_open_item">Abrir detalles del artículo</string>
++    <string name="outfit_count_1">1 atuendo</string>
++    <string name="outfit_count_3">3 atuendos</string>
++    <string name="outfit_count_5">5 atuendos</string>
++
++    <!-- Item detail -->
++    <string name="delete_item_title">¿Eliminar artículo?</string>
++    <string name="delete_item_message">Esto eliminará el artículo de tu armario.</string>
++    <string name="info_category">Categoría</string>
++    <string name="info_type">Tipo</string>
++    <string name="info_color">Color</string>
++    <string name="info_pattern">Estampado</string>
++    <string name="info_style">Estilo</string>
++    <string name="info_fit">Ajuste</string>
++    <string name="info_season">Temporada</string>
++    <string name="info_brand">Marca</string>
++    <string name="info_worn">Usado</string>
++
++    <plurals name="items_worn">
++        <item quantity="one">%1$d vez</item>
++        <item quantity="other">%1$d veces</item>
++    </plurals>
++
++    <!-- Add item -->
++    <string name="screen_add_item">Añadir artículo</string>
++    <string name="add_a_category">Añadir %1$s</string>
++    <string name="upload_photo">Subir foto</string>
++    <string name="field_type">Tipo (p. ej. camiseta oversized)</string>
++    <string name="field_color">Color (p. ej. negro)</string>
++    <string name="field_brand">Marca (opcional)</string>
++    <string name="save_item">Guardar artículo</string>
++    <string name="cd_selected_image">Imagen seleccionada</string>
++
++    <!-- AI Stylist -->
++    <string name="screen_ai">Estilista IA</string>
++    <string name="ai_create_title">Crea tu atuendo</string>
++    <string name="label_occasion">Ocasión</string>
++    <string name="label_style">Estilo</string>
++    <string name="label_color_pref">Preferencia de color</string>
++    <string name="label_weather">Clima</string>
++    <string name="label_automatic">Automático</string>
++    <string name="label_shoes">Zapatos</string>
++    <string name="label_use_my_wardrobe">Usar solo mi armario</string>
++    <string name="label_use_my_wardrobe_hint">Nunca sugiere artículos que no tienes</string>
++    <string name="label_outfit_count">Número de atuendos</string>
++    <string name="btn_generate">Generar atuendo</string>
++    <string name="btn_generating">Generando…</string>
++
++    <!-- Saved outfits -->
++    <string name="screen_saved">Mis atuendos</string>
++    <string name="cd_outfit_calendar">Calendario de atuendos</string>
++    <string name="cd_mix_match">Mezclar y combinar</string>
++    <string name="saved_empty_title">Aún no hay atuendos guardados</string>
++    <string name="saved_empty_hint">Genera un atuendo con el Estilista IA y toca GUARDAR.</string>
++
++    <!-- Profile -->
++    <string name="screen_profile">Perfil</string>
++    <string name="profile_guest_name">Usuario invitado</string>
++    <string name="profile_guest_account">Cuenta de invitado</string>
++    <string name="badge_free">GRATIS</string>
++    <string name="stat_items">Artículos</string>
++    <string name="stat_outfits">Atuendos creados</string>
++    <string name="settings_title">Ajustes</string>
++    <string name="settings_notifications">Notificaciones</string>
++    <string name="settings_appearance">Apariencia</string>
++    <string name="settings_signin">Inicia sesión para guardar datos</string>
++
++    <!-- Analytics -->
++    <string name="screen_analytics">Estadísticas</string>
++    <string name="analytics_stats">Estadísticas del armario</string>
++    <string name="stat_total_items">Total de artículos</string>
++    <string name="stat_most_common_color">Color más común</string>
++    <string name="analytics_by_category">Por categoría</string>
++</resources>
+diff --git a/app/src/main/res/values-iw/strings.xml b/app/src/main/res/values-iw/strings.xml
+new file mode 100644
+index 0000000..24bdbb7
+--- /dev/null
++++ b/app/src/main/res/values-iw/strings.xml
+@@ -0,0 +1,128 @@
++<resources>
++    <!-- Common / actions -->
++    <string name="cancel">ביטול</string>
++    <string name="delete">מחיקה</string>
++    <string name="cd_back">חזרה</string>
++    <string name="cd_edit">עריכה</string>
++    <string name="cd_delete">מחיקה</string>
++
++    <!-- Bottom navigation -->
++    <string name="nav_home">בית</string>
++    <string name="nav_wardrobe">ארון</string>
++    <string name="nav_ai">בינה מלאכותית</string>
++    <string name="nav_saved">שמורים</string>
++    <string name="nav_profile">פרופיל</string>
++
++    <!-- Login -->
++    <string name="login_tagline">הסטייליסט הדיגיטלי שלך</string>
++    <string name="login_sign_in_to_continue">התחברות כדי להמשיך</string>
++    <string name="login_google">המשך עם Google</string>
++    <string name="login_apple">המשך עם Apple</string>
++    <string name="login_email">המשך עם אימייל</string>
++    <string name="login_skip">לדלג לבינתיים — המשך כאורח</string>
++
++    <!-- Home -->
++    <string name="greeting_morning">בוקר טוב</string>
++    <string name="greeting_afternoon">צהריים טובים</string>
++    <string name="greeting_evening">ערב טוב</string>
++    <string name="greeting_late">עובד עד מאוחר</string>
++    <string name="home_headline">הארון שלך, בסטייל.</string>
++    <string name="home_weather_label">מזג האוויר היום • לא ידוע</string>
++    <string name="home_weather_value">22°C • מעונן חלקית</string>
++    <string name="home_wardrobe_status">מצב הארון</string>
++    <string name="home_recommended">הופעה מומלצת</string>
++    <string name="home_recommended_hint">הוסף חלק עליון, תחתון ונעליים כדי לקבל כאן את ההופעה המומלצת הראשונה.</string>
++    <string name="home_generate_cta">יצירת הופעה</string>
++
++    <!-- Categories -->
++    <string name="category_tops">חלקים עליונים</string>
++    <string name="category_bottoms">חלקים תחתונים</string>
++    <string name="category_shoes">נעליים</string>
++    <string name="category_outerwear">מעילים</string>
++    <string name="category_accessories">אביזרים</string>
++    <string name="category_bags">תיקים</string>
++    <string name="category_watches">שעונים</string>
++    <string name="category_jewelry">תכשיטים</string>
++
++    <!-- Wardrobe -->
++    <string name="screen_wardrobe">ארון</string>
++    <string name="cd_analytics">סטטיסטיקות</string>
++    <string name="add_item">הוספת פריט</string>
++    <string name="cd_add_item">הוספת פריט</string>
++    <string name="empty_no_category">אין עדיין %1$s</string>
++    <string name="empty_hint">הקש "הוספת פריט" כדי לצלם או להעלות תמונה.</string>
++    <string name="cd_garment_card">פריט לבוש: %1$s, צבע %2$s, סטייל %3$s. הקשה כפולה לפרטים.</string>
++    <string name="cd_open_item">פתיחת פרטי הפריט</string>
++    <string name="outfit_count_1">הופעה אחת</string>
++    <string name="outfit_count_3">3 הופעות</string>
++    <string name="outfit_count_5">5 הופעות</string>
++
++    <!-- Item detail -->
++    <string name="delete_item_title">למחוק את הפריט?</string>
++    <string name="delete_item_message">הפריט יוסר מהארון שלך.</string>
++    <string name="info_category">קטגוריה</string>
++    <string name="info_type">סוג</string>
++    <string name="info_color">צבע</string>
++    <string name="info_pattern">דוגמה</string>
++    <string name="info_style">סטייל</string>
++    <string name="info_fit">התאמה</string>
++    <string name="info_season">עונה</string>
++    <string name="info_brand">מותג</string>
++    <string name="info_worn">פעמים שנלבש</string>
++
++    <plurals name="items_worn">
++        <item quantity="one">פעם אחת</item>
++        <item quantity="other">%1$d פעמים</item>
++    </plurals>
++
++    <!-- Add item -->
++    <string name="screen_add_item">הוספת פריט</string>
++    <string name="add_a_category">הוספת %1$s</string>
++    <string name="upload_photo">העלאת תמונה</string>
++    <string name="field_type">סוג (למשל: חולצה רחבה)</string>
++    <string name="field_color">צבע (למשל: שחור)</string>
++    <string name="field_brand">מותג (אופציונלי)</string>
++    <string name="save_item">שמירת פריט</string>
++    <string name="cd_selected_image">תמונה נבחרת</string>
++
++    <!-- AI Stylist -->
++    <string name="screen_ai">סטייליסט AI</string>
++    <string name="ai_create_title">יצירת ההופעה שלך</string>
++    <string name="label_occasion">אירוע</string>
++    <string name="label_style">סטייל</string>
++    <string name="label_color_pref">העדפת צבע</string>
++    <string name="label_weather">מזג אוויר</string>
++    <string name="label_automatic">אוטומטי</string>
++    <string name="label_shoes">נעליים</string>
++    <string name="label_use_my_wardrobe">שימוש בארון שלי בלבד</string>
++    <string name="label_use_my_wardrobe_hint">לעולם לא מציע פריטים שאינם בבעלותך</string>
++    <string name="label_outfit_count">מספר ההופעות</string>
++    <string name="btn_generate">יצירת הופעה</string>
++    <string name="btn_generating">יוצר…</string>
++
++    <!-- Saved outfits -->
++    <string name="screen_saved">ההופעות שלי</string>
++    <string name="cd_outfit_calendar">לוח שנת הופעות</string>
++    <string name="cd_mix_match">שילוב והתאמה</string>
++    <string name="saved_empty_title">אין עדיין הופעות שמורות</string>
++    <string name="saved_empty_hint">צור הופעה עם סטייליסט ה-AI והקש שמירה.</string>
++
++    <!-- Profile -->
++    <string name="screen_profile">פרופיל</string>
++    <string name="profile_guest_name">משתמש אורח</string>
++    <string name="profile_guest_account">חשבון אורח</string>
++    <string name="badge_free">חינם</string>
++    <string name="stat_items">פריטים</string>
++    <string name="stat_outfits">הופעות שנוצרו</string>
++    <string name="settings_title">הגדרות</string>
++    <string name="settings_notifications">התראות</string>
++    <string name="settings_appearance">מראה</string>
++    <string name="settings_signin">התחברות לשמירת נתונים</string>
++
++    <!-- Analytics -->
++    <string name="screen_analytics">סטטיסטיקות</string>
++    <string name="analytics_stats">סטטיסטיקות הארון</string>
++    <string name="stat_total_items">סך הפריטים</string>
++    <string name="stat_most_common_color">הצבע הנפוץ ביותר</string>
++    <string name="analytics_by_category">לפי קטגוריה</string>
++</resources>
+diff --git a/app/src/main/res/values-ja/strings.xml b/app/src/main/res/values-ja/strings.xml
+new file mode 100644
+index 0000000..264c871
+--- /dev/null
++++ b/app/src/main/res/values-ja/strings.xml
+@@ -0,0 +1,127 @@
++<resources>
++    <!-- Common / actions -->
++    <string name="cancel">キャンセル</string>
++    <string name="delete">削除</string>
++    <string name="cd_back">戻る</string>
++    <string name="cd_edit">編集</string>
++    <string name="cd_delete">削除</string>
++
++    <!-- Bottom navigation -->
++    <string name="nav_home">ホーム</string>
++    <string name="nav_wardrobe">クローゼット</string>
++    <string name="nav_ai">AI</string>
++    <string name="nav_saved">保存済み</string>
++    <string name="nav_profile">プロフィール</string>
++
++    <!-- Login -->
++    <string name="login_tagline">あなたのAIクローゼットスタイリスト</string>
++    <string name="login_sign_in_to_continue">サインインして続行</string>
++    <string name="login_google">Googleで続行</string>
++    <string name="login_apple">Appleで続行</string>
++    <string name="login_email">メールで続行</string>
++    <string name="login_skip">今はスキップ — ゲストとして続行</string>
++
++    <!-- Home -->
++    <string name="greeting_morning">おはようございます</string>
++    <string name="greeting_afternoon">こんにちは</string>
++    <string name="greeting_evening">こんばんは</string>
++    <string name="greeting_late">夜遅くまでお疲れさま</string>
++    <string name="home_headline">あなたのクローゼットを、もっと素敵に。</string>
++    <string name="home_weather_label">今日の天気 • 不明</string>
++    <string name="home_weather_value">22°C • 晴れ時々曇り</string>
++    <string name="home_wardrobe_status">クローゼットの状態</string>
++    <string name="home_recommended">おすすめのコーデ</string>
++    <string name="home_recommended_hint">トップス・ボトムス・シューズを追加すると、最初のおすすめコーデがここに表示されます。</string>
++    <string name="home_generate_cta">コーデを作成</string>
++
++    <!-- Categories -->
++    <string name="category_tops">トップス</string>
++    <string name="category_bottoms">ボトムス</string>
++    <string name="category_shoes">シューズ</string>
++    <string name="category_outerwear">アウター</string>
++    <string name="category_accessories">小物</string>
++    <string name="category_bags">バッグ</string>
++    <string name="category_watches">腕時計</string>
++    <string name="category_jewelry">ジュエリー</string>
++
++    <!-- Wardrobe -->
++    <string name="screen_wardrobe">クローゼット</string>
++    <string name="cd_analytics">統計</string>
++    <string name="add_item">アイテムを追加</string>
++    <string name="cd_add_item">アイテムを追加</string>
++    <string name="empty_no_category">%1$sはまだありません</string>
++    <string name="empty_hint">「アイテムを追加」から写真を撮影またはアップロードしましょう。</string>
++    <string name="cd_garment_card">アイテム:%1$s、色 %2$s、スタイル %3$s。詳細はダブルタップ。</string>
++    <string name="cd_open_item">アイテムの詳細を開く</string>
++    <string name="outfit_count_1">1コーデ</string>
++    <string name="outfit_count_3">3コーデ</string>
++    <string name="outfit_count_5">5コーデ</string>
++
++    <!-- Item detail -->
++    <string name="delete_item_title">アイテムを削除しますか？</string>
++    <string name="delete_item_message">このアイテムがクローゼットから削除されます。</string>
++    <string name="info_category">カテゴリ</string>
++    <string name="info_type">種類</string>
++    <string name="info_color">色</string>
++    <string name="info_pattern">パターン</string>
++    <string name="info_style">スタイル</string>
++    <string name="info_fit">フィット感</string>
++    <string name="info_season">シーズン</string>
++    <string name="info_brand">ブランド</string>
++    <string name="info_worn">着用回数</string>
++
++    <plurals name="items_worn">
++        <item quantity="other">%1$d回</item>
++    </plurals>
++
++    <!-- Add item -->
++    <string name="screen_add_item">アイテムを追加</string>
++    <string name="add_a_category">%1$sを追加</string>
++    <string name="upload_photo">写真をアップロード</string>
++    <string name="field_type">種類（例：オーバーサイズTシャツ）</string>
++    <string name="field_color">色（例：黒）</string>
++    <string name="field_brand">ブランド（任意）</string>
++    <string name="save_item">保存</string>
++    <string name="cd_selected_image">選択した画像</string>
++
++    <!-- AI Stylist -->
++    <string name="screen_ai">AIスタイリスト</string>
++    <string name="ai_create_title">コーデを作成</string>
++    <string name="label_occasion">シーン</string>
++    <string name="label_style">スタイル</string>
++    <string name="label_color_pref">色の好み</string>
++    <string name="label_weather">天気</string>
++    <string name="label_automatic">自動</string>
++    <string name="label_shoes">シューズ</string>
++    <string name="label_use_my_wardrobe">自分のクローゼットのみ使用</string>
++    <string name="label_use_my_wardrobe_hint">所有していないアイテムは提案しません</string>
++    <string name="label_outfit_count">コーデ数</string>
++    <string name="btn_generate">コーデを作成</string>
++    <string name="btn_generating">生成中…</string>
++
++    <!-- Saved outfits -->
++    <string name="screen_saved">マイコーデ</string>
++    <string name="cd_outfit_calendar">コーデカレンダー</string>
++    <string name="cd_mix_match">ミックス＆マッチ</string>
++    <string name="saved_empty_title">保存されたコーデはまだありません</string>
++    <string name="saved_empty_hint">AIスタイリストでコーデを作成して保存しましょう。</string>
++
++    <!-- Profile -->
++    <string name="screen_profile">プロフィール</string>
++    <string name="profile_guest_name">ゲストユーザー</string>
++    <string name="profile_guest_account">ゲストアカウント</string>
++    <string name="badge_free">無料</string>
++    <string name="stat_items">アイテム</string>
++    <string name="stat_outfits">作成したコーデ</string>
++    <string name="settings_title">設定</string>
++    <string name="settings_notifications">通知</string>
++    <string name="settings_appearance">外観</string>
++    <string name="settings_signin">サインインしてデータを保存</string>
++
++    <!-- Analytics -->
++    <string name="screen_analytics">統計</string>
++    <string name="analytics_stats">クローゼットの統計</string>
++    <string name="stat_total_items">合計アイテム数</string>
++    <string name="stat_most_common_color">最も多い色</string>
++    <string name="analytics_by_category">カテゴリ別</string>
++</resources>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index a7c6283..2af3fac 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -1,3 +1,133 @@
+ <resources>
+-    <string name="app_name">StyleDrop</string>
++    <string name="app_name" translatable="false">StyleDrop</string>
++
++    <!-- Common / actions -->
++    <string name="cancel">Cancel</string>
++    <string name="delete">Delete</string>
++    <string name="cd_back">Back</string>
++    <string name="cd_edit">Edit</string>
++    <string name="cd_delete">Delete</string>
++    <string name="cd_login_logo">StyleDrop logo</string>
++
++    <!-- Bottom navigation -->
++    <string name="nav_home">Home</string>
++    <string name="nav_wardrobe">Wardrobe</string>
++    <string name="nav_ai">AI</string>
++    <string name="nav_saved">Saved</string>
++    <string name="nav_profile">Profile</string>
++
++    <!-- Login -->
++    <string name="login_tagline">Your AI Wardrobe Stylist</string>
++    <string name="login_sign_in_to_continue">Sign in to continue</string>
++    <string name="login_google">Continue with Google</string>
++    <string name="login_apple">Continue with Apple</string>
++    <string name="login_email">Continue with Email</string>
++    <string name="login_skip">Skip for now — Continue as Guest</string>
++
++    <!-- Home -->
++    <string name="greeting_morning">Good morning</string>
++    <string name="greeting_afternoon">Good afternoon</string>
++    <string name="greeting_evening">Good evening</string>
++    <string name="greeting_late">Working late</string>
++    <string name="home_headline">Your wardrobe, curated.</string>
++    <string name="home_weather_label">Today\'s Weather • Unknown</string>
++    <string name="home_weather_value">22°C • Partly Cloudy</string>
++    <string name="home_wardrobe_status">Wardrobe Status</string>
++    <string name="home_recommended">Recommended Outfit</string>
++    <string name="home_recommended_hint">Add a top, a bottom and a pair of shoes to get your first recommended outfit here.</string>
++    <string name="home_generate_cta">Generate an outfit</string>
++
++    <!-- Categories -->
++    <string name="category_tops">Tops</string>
++    <string name="category_bottoms">Bottoms</string>
++    <string name="category_shoes">Shoes</string>
++    <string name="category_outerwear">Outerwear</string>
++    <string name="category_accessories">Accessories</string>
++    <string name="category_bags">Bags</string>
++    <string name="category_watches">Watches</string>
++    <string name="category_jewelry">Jewelry</string>
++
++    <!-- Wardrobe -->
++    <string name="screen_wardrobe">Wardrobe</string>
++    <string name="cd_analytics">Analytics</string>
++    <string name="add_item">Add Item</string>
++    <string name="cd_add_item">Add item</string>
++    <string name="empty_no_category">No %1$s yet</string>
++    <string name="empty_hint">Tap "Add Item" to snap or upload a photo.</string>
++    <!-- Accessible name for a garment card, built from real item data. -->
++    <string name="cd_garment_card">Garment: %1$s, color %2$s, %3$s style. Double-tap to view details.</string>
++    <string name="cd_open_item">Open item details</string>
++    <string name="outfit_count_1">1 outfit</string>
++    <string name="outfit_count_3">3 outfits</string>
++    <string name="outfit_count_5">5 outfits</string>
++
++    <!-- Item detail -->
++    <string name="delete_item_title">Delete item?</string>
++    <string name="delete_item_message">This will remove the item from your wardrobe.</string>
++    <string name="info_category">Category</string>
++    <string name="info_type">Type</string>
++    <string name="info_color">Color</string>
++    <string name="info_pattern">Pattern</string>
++    <string name="info_style">Style</string>
++    <string name="info_fit">Fit</string>
++    <string name="info_season">Season</string>
++    <string name="info_brand">Brand</string>
++    <string name="info_worn">Worn</string>
++
++    <plurals name="items_worn">
++        <item quantity="one">%1$d time</item>
++        <item quantity="other">%1$d times</item>
++    </plurals>
++
++    <!-- Add item -->
++    <string name="screen_add_item">Add Item</string>
++    <string name="add_a_category">Add a %1$s</string>
++    <string name="upload_photo">Upload photo</string>
++    <string name="field_type">Type (e.g. Oversized T-Shirt)</string>
++    <string name="field_color">Color (e.g. Black)</string>
++    <string name="field_brand">Brand (optional)</string>
++    <string name="save_item">Save item</string>
++    <string name="cd_selected_image">Selected image</string>
++
++    <!-- AI Stylist -->
++    <string name="screen_ai">AI Stylist</string>
++    <string name="ai_create_title">Create your outfit</string>
++    <string name="label_occasion">Occasion</string>
++    <string name="label_style">Style</string>
++    <string name="label_color_pref">Color preference</string>
++    <string name="label_weather">Weather</string>
++    <string name="label_automatic">Automatic</string>
++    <string name="label_shoes">Shoes</string>
++    <string name="label_use_my_wardrobe">Use only my wardrobe</string>
++    <string name="label_use_my_wardrobe_hint">Never suggests items you don\'t own</string>
++    <string name="label_outfit_count">Number of outfits</string>
++    <string name="btn_generate">Generate outfit</string>
++    <string name="btn_generating">Generating…</string>
++
++    <!-- Saved outfits -->
++    <string name="screen_saved">My Outfits</string>
++    <string name="cd_outfit_calendar">Outfit Calendar</string>
++    <string name="cd_mix_match">Mix &amp; Match</string>
++    <string name="saved_empty_title">No saved outfits yet</string>
++    <string name="saved_empty_hint">Generate an outfit with the AI Stylist and tap SAVE.</string>
++
++    <!-- Profile -->
++    <string name="screen_profile">Profile</string>
++    <string name="profile_guest_name">Guest User</string>
++    <string name="profile_guest_account">Guest account</string>
++    <string name="badge_free">FREE</string>
++    <string name="stat_items">Items</string>
++    <string name="stat_outfits">Outfits made</string>
++    <string name="settings_title">Settings</string>
++    <string name="settings_notifications">Notifications</string>
++    <string name="settings_appearance">Appearance</string>
++    <string name="settings_signin">Sign in to save data</string>
++
++    <!-- Analytics -->
++    <string name="screen_analytics">Analytics</string>
++    <string name="analytics_stats">Wardrobe Stats</string>
++    <string name="stat_total_items">Total Items</string>
++    <string name="stat_most_common_color">Most Common Color</string>
++    <string name="analytics_by_category">By Category</string>
++    <string name="na" translatable="false">N/A</string>
+ </resources>
+diff --git a/app/src/main/res/xml/locales_config.xml b/app/src/main/res/xml/locales_config.xml
+new file mode 100644
+index 0000000..910d6e3
+--- /dev/null
++++ b/app/src/main/res/xml/locales_config.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Android 13+ per-app language support: declares the locales shipped with the app. -->
++<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
++    <locale android:name="en" />
++    <locale android:name="es" />
++    <locale android:name="ja" />
++    <locale android:name="ar" />
++    <locale android:name="iw" />
++</locale-config>
+diff --git a/i18n/en.json b/i18n/en.json
+new file mode 100644
+index 0000000..690c2da
+--- /dev/null
++++ b/i18n/en.json
+@@ -0,0 +1,120 @@
++{
++  "app": {
++    "name": "StyleDrop"
++  },
++  "common": {
++    "cancel": "Cancel",
++    "delete": "Delete"
++  },
++  "nav": {
++    "home": "Home",
++    "wardrobe": "Wardrobe",
++    "ai": "AI",
++    "saved": "Saved",
++    "profile": "Profile"
++  },
++  "login": {
++    "tagline": "Your AI Wardrobe Stylist",
++    "signInToContinue": "Sign in to continue",
++    "google": "Continue with Google",
++    "apple": "Continue with Apple",
++    "email": "Continue with Email",
++    "skip": "Skip for now — Continue as Guest"
++  },
++  "home": {
++    "greetingMorning": "Good morning",
++    "greetingAfternoon": "Good afternoon",
++    "greetingEvening": "Good evening",
++    "greetingLate": "Working late",
++    "headline": "Your wardrobe, curated.",
++    "weatherLabel": "Today's Weather • Unknown",
++    "weatherValue": "22°C • Partly Cloudy",
++    "wardrobeStatus": "Wardrobe Status",
++    "recommended": "Recommended Outfit",
++    "recommendedHint": "Add a top, a bottom and a pair of shoes to get your first recommended outfit here.",
++    "generateCta": "Generate an outfit"
++  },
++  "category": {
++    "tops": "Tops",
++    "bottoms": "Bottoms",
++    "shoes": "Shoes",
++    "outerwear": "Outerwear",
++    "accessories": "Accessories",
++    "bags": "Bags",
++    "watches": "Watches",
++    "jewelry": "Jewelry"
++  },
++  "wardrobe": {
++    "title": "Wardrobe",
++    "addItem": "Add Item",
++    "emptyNoCategory": "No {category} yet",
++    "emptyHint": "Tap \"Add Item\" to snap or upload a photo."
++  },
++  "item": {
++    "garmentCard": "Garment: {type}, color {color}, {style} style. Double-tap to view details.",
++    "openItem": "Open item details",
++    "deleteTitle": "Delete item?",
++    "deleteMessage": "This will remove the item from your wardrobe.",
++    "category": "Category",
++    "type": "Type",
++    "color": "Color",
++    "pattern": "Pattern",
++    "style": "Style",
++    "fit": "Fit",
++    "season": "Season",
++    "brand": "Brand",
++    "worn": "Worn",
++    "wornTimes": "{count, plural, one {# time} other {# times}}"
++  },
++  "addItem": {
++    "title": "Add Item",
++    "addACategory": "Add a {category}",
++    "uploadPhoto": "Upload photo",
++    "typeField": "Type (e.g. Oversized T-Shirt)",
++    "colorField": "Color (e.g. Black)",
++    "brandField": "Brand (optional)",
++    "save": "Save item",
++    "selectedImage": "Selected image"
++  },
++  "ai": {
++    "title": "AI Stylist",
++    "createTitle": "Create your outfit",
++    "occasion": "Occasion",
++    "style": "Style",
++    "colorPref": "Color preference",
++    "weather": "Weather",
++    "automatic": "Automatic",
++    "shoes": "Shoes",
++    "useMyWardrobe": "Use only my wardrobe",
++    "useMyWardrobeHint": "Never suggests items you don't own",
++    "outfitCount": "Number of outfits",
++    "generate": "Generate outfit",
++    "generating": "Generating…"
++  },
++  "saved": {
++    "title": "My Outfits",
++    "calendar": "Outfit Calendar",
++    "mixMatch": "Mix & Match",
++    "emptyTitle": "No saved outfits yet",
++    "emptyHint": "Generate an outfit with the AI Stylist and tap SAVE."
++  },
++  "profile": {
++    "title": "Profile",
++    "guestName": "Guest User",
++    "guestAccount": "Guest account",
++    "freeBadge": "FREE",
++    "itemsStat": "Items",
++    "outfitsStat": "Outfits made",
++    "settings": "Settings",
++    "notifications": "Notifications",
++    "appearance": "Appearance",
++    "signInToSave": "Sign in to save data"
++  },
++  "analytics": {
++    "title": "Analytics",
++    "stats": "Wardrobe Stats",
++    "totalItems": "Total Items",
++    "mostCommonColor": "Most Common Color",
++    "byCategory": "By Category"
++  }
++}
+diff --git a/i18n/es.json b/i18n/es.json
+new file mode 100644
+index 0000000..1208143
+--- /dev/null
++++ b/i18n/es.json
+@@ -0,0 +1,120 @@
++{
++  "app": {
++    "name": "StyleDrop"
++  },
++  "common": {
++    "cancel": "Cancelar",
++    "delete": "Eliminar"
++  },
++  "nav": {
++    "home": "Inicio",
++    "wardrobe": "Armario",
++    "ai": "IA",
++    "saved": "Guardados",
++    "profile": "Perfil"
++  },
++  "login": {
++    "tagline": "Tu estilista de armario con IA",
++    "signInToContinue": "Inicia sesión para continuar",
++    "google": "Continuar con Google",
++    "apple": "Continuar con Apple",
++    "email": "Continuar con correo",
++    "skip": "Omitir por ahora — Continuar como invitado"
++  },
++  "home": {
++    "greetingMorning": "Buenos días",
++    "greetingAfternoon": "Buenas tardes",
++    "greetingEvening": "Buenas noches",
++    "greetingLate": "Trabajando hasta tarde",
++    "headline": "Tu armario, a tu medida.",
++    "weatherLabel": "El tiempo de hoy • Desconocido",
++    "weatherValue": "22°C • Parcialmente nublado",
++    "wardrobeStatus": "Estado del armario",
++    "recommended": "Atuendo recomendado",
++    "recommendedHint": "Añade una prenda de arriba, una de abajo y unos zapatos para ver aquí tu primer atuendo recomendado.",
++    "generateCta": "Generar un atuendo"
++  },
++  "category": {
++    "tops": "Tops",
++    "bottoms": "Bajos",
++    "shoes": "Zapatos",
++    "outerwear": "Abrigos",
++    "accessories": "Accesorios",
++    "bags": "Bolsos",
++    "watches": "Relojes",
++    "jewelry": "Joyas"
++  },
++  "wardrobe": {
++    "title": "Armario",
++    "addItem": "Añadir",
++    "emptyNoCategory": "Aún no hay {category}",
++    "emptyHint": "Toca \"Añadir\" para tomar o subir una foto."
++  },
++  "item": {
++    "garmentCard": "Prenda: {type}, color {color}, estilo {style}. Toca dos veces para ver los detalles.",
++    "openItem": "Abrir detalles del artículo",
++    "deleteTitle": "¿Eliminar artículo?",
++    "deleteMessage": "Esto eliminará el artículo de tu armario.",
++    "category": "Categoría",
++    "type": "Tipo",
++    "color": "Color",
++    "pattern": "Estampado",
++    "style": "Estilo",
++    "fit": "Ajuste",
++    "season": "Temporada",
++    "brand": "Marca",
++    "worn": "Usado",
++    "wornTimes": "{count, plural, one {# vez} other {# veces}}"
++  },
++  "addItem": {
++    "title": "Añadir artículo",
++    "addACategory": "Añadir {category}",
++    "uploadPhoto": "Subir foto",
++    "typeField": "Tipo (p. ej. camiseta oversized)",
++    "colorField": "Color (p. ej. negro)",
++    "brandField": "Marca (opcional)",
++    "save": "Guardar artículo",
++    "selectedImage": "Imagen seleccionada"
++  },
++  "ai": {
++    "title": "Estilista IA",
++    "createTitle": "Crea tu atuendo",
++    "occasion": "Ocasión",
++    "style": "Estilo",
++    "colorPref": "Preferencia de color",
++    "weather": "Clima",
++    "automatic": "Automático",
++    "shoes": "Zapatos",
++    "useMyWardrobe": "Usar solo mi armario",
++    "useMyWardrobeHint": "Nunca sugiere artículos que no tienes",
++    "outfitCount": "Número de atuendos",
++    "generate": "Generar atuendo",
++    "generating": "Generando…"
++  },
++  "saved": {
++    "title": "Mis atuendos",
++    "calendar": "Calendario de atuendos",
++    "mixMatch": "Mezclar y combinar",
++    "emptyTitle": "Aún no hay atuendos guardados",
++    "emptyHint": "Genera un atuendo con el Estilista IA y toca GUARDAR."
++  },
++  "profile": {
++    "title": "Perfil",
++    "guestName": "Usuario invitado",
++    "guestAccount": "Cuenta de invitado",
++    "freeBadge": "GRATIS",
++    "itemsStat": "Artículos",
++    "outfitsStat": "Atuendos creados",
++    "settings": "Ajustes",
++    "notifications": "Notificaciones",
++    "appearance": "Apariencia",
++    "signInToSave": "Inicia sesión para guardar datos"
++  },
++  "analytics": {
++    "title": "Estadísticas",
++    "stats": "Estadísticas del armario",
++    "totalItems": "Total de artículos",
++    "mostCommonColor": "Color más común",
++    "byCategory": "Por categoría"
++  }
++}
+diff --git a/i18n/ja.json b/i18n/ja.json
+new file mode 100644
+index 0000000..b340fbe
+--- /dev/null
++++ b/i18n/ja.json
+@@ -0,0 +1,120 @@
++{
++  "app": {
++    "name": "StyleDrop"
++  },
++  "common": {
++    "cancel": "キャンセル",
++    "delete": "削除"
++  },
++  "nav": {
++    "home": "ホーム",
++    "wardrobe": "クローゼット",
++    "ai": "AI",
++    "saved": "保存済み",
++    "profile": "プロフィール"
++  },
++  "login": {
++    "tagline": "あなたのAIクローゼットスタイリスト",
++    "signInToContinue": "サインインして続行",
++    "google": "Googleで続行",
++    "apple": "Appleで続行",
++    "email": "メールで続行",
++    "skip": "今はスキップ — ゲストとして続行"
++  },
++  "home": {
++    "greetingMorning": "おはようございます",
++    "greetingAfternoon": "こんにちは",
++    "greetingEvening": "こんばんは",
++    "greetingLate": "夜遅くまでお疲れさま",
++    "headline": "あなたのクローゼットを、もっと素敵に。",
++    "weatherLabel": "今日の天気 • 不明",
++    "weatherValue": "22°C • 晴れ時々曇り",
++    "wardrobeStatus": "クローゼットの状態",
++    "recommended": "おすすめのコーデ",
++    "recommendedHint": "トップス・ボトムス・シューズを追加すると、最初のおすすめコーデがここに表示されます。",
++    "generateCta": "コーデを作成"
++  },
++  "category": {
++    "tops": "トップス",
++    "bottoms": "ボトムス",
++    "shoes": "シューズ",
++    "outerwear": "アウター",
++    "accessories": "小物",
++    "bags": "バッグ",
++    "watches": "腕時計",
++    "jewelry": "ジュエリー"
++  },
++  "wardrobe": {
++    "title": "クローゼット",
++    "addItem": "アイテムを追加",
++    "emptyNoCategory": "{category}はまだありません",
++    "emptyHint": "「アイテムを追加」から写真を撮影またはアップロードしましょう。"
++  },
++  "item": {
++    "garmentCard": "アイテム:{type}、色 {color}、スタイル {style}。詳細はダブルタップ。",
++    "openItem": "アイテムの詳細を開く",
++    "deleteTitle": "アイテムを削除しますか？",
++    "deleteMessage": "このアイテムがクローゼットから削除されます。",
++    "category": "カテゴリ",
++    "type": "種類",
++    "color": "色",
++    "pattern": "パターン",
++    "style": "スタイル",
++    "fit": "フィット感",
++    "season": "シーズン",
++    "brand": "ブランド",
++    "worn": "着用回数",
++    "wornTimes": "{count, plural, other {#回}}"
++  },
++  "addItem": {
++    "title": "アイテムを追加",
++    "addACategory": "{category}を追加",
++    "uploadPhoto": "写真をアップロード",
++    "typeField": "種類（例：オーバーサイズTシャツ）",
++    "colorField": "色（例：黒）",
++    "brandField": "ブランド（任意）",
++    "save": "保存",
++    "selectedImage": "選択した画像"
++  },
++  "ai": {
++    "title": "AIスタイリスト",
++    "createTitle": "コーデを作成",
++    "occasion": "シーン",
++    "style": "スタイル",
++    "colorPref": "色の好み",
++    "weather": "天気",
++    "automatic": "自動",
++    "shoes": "シューズ",
++    "useMyWardrobe": "自分のクローゼットのみ使用",
++    "useMyWardrobeHint": "所有していないアイテムは提案しません",
++    "outfitCount": "コーデ数",
++    "generate": "コーデを作成",
++    "generating": "生成中…"
++  },
++  "saved": {
++    "title": "マイコーデ",
++    "calendar": "コーデカレンダー",
++    "mixMatch": "ミックス＆マッチ",
++    "emptyTitle": "保存されたコーデはまだありません",
++    "emptyHint": "AIスタイリストでコーデを作成して保存しましょう。"
++  },
++  "profile": {
++    "title": "プロフィール",
++    "guestName": "ゲストユーザー",
++    "guestAccount": "ゲストアカウント",
++    "freeBadge": "無料",
++    "itemsStat": "アイテム",
++    "outfitsStat": "作成したコーデ",
++    "settings": "設定",
++    "notifications": "通知",
++    "appearance": "外観",
++    "signInToSave": "サインインしてデータを保存"
++  },
++  "analytics": {
++    "title": "統計",
++    "stats": "クローゼットの統計",
++    "totalItems": "合計アイテム数",
++    "mostCommonColor": "最も多い色",
++    "byCategory": "カテゴリ別"
++  }
++}

@@ -1,0 +1,131 @@
+# detekt configuration for StyleDrop — tuned so the FIRST CI run is green,
+# then tightened incrementally (raise thresholds as the codebase matures).
+build:
+  maxIssues: 0              # fail the build on any finding once baseline is empty
+  excludeCorrectable: false
+  weights:
+    complexity: 2
+    LongParameterList: 1
+    comments: 1
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+complexity:
+  active: true
+  LongMethod:
+    threshold: 80
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 8
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 30
+    thresholdInClasses: 20
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 25
+  NestedBlockDepth:
+    threshold: 6
+  ComplexCondition:
+    threshold: 5
+
+style:
+  active: true
+  MagicNumber:
+    active: true
+    ignoreNumbers: ['-1', '0', '1', '2', '3', '10', '100', '255', '360']
+    ignorePropertyDeclaration: true
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreEnums: true
+    ignoreRanges: true
+    ignoreExtensionFunctions: false
+  MaxLineLength:
+    active: true
+    maxLineLength: 150
+    excludePackageStatements: true
+    excludeImportStatements: true
+  UnusedPrivateMember:
+    active: true
+  WildcardImport:
+    active: true
+  ReturnCount:
+    max: 8
+  DataClassContainsFunctions:
+    active: false
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: 'Do not commit TODO markers on the release branch.'
+        value: 'STOPSHIP'
+  FunctionOnlyReturningConstant:
+    active: false
+  UtilityClassWithPublicConstructor:
+    active: false
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    active: true
+  ClassNaming:
+    active: true
+  MatchingDeclarationName:
+    active: false
+
+potential-bugs:
+  active: true
+  CastNullableToNonNullableType:
+    active: false
+  ImplicitDefaultLocale:
+    active: true
+  UnsafeCallOnNullableType:
+    active: true
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: true
+    exceptions: ['Exception', 'Throwable']
+  SwallowedException:
+    active: false
+  ThrowingExceptionFromFinally:
+    active: true
+
+empty-blocks:
+  active: true
+  EmptyFunctionBlock:
+    active: true
+    ignoreOverridden: true
+
+comments:
+  active: true
+  UndocumentedPublicClass:
+    active: false
+  UndocumentedPublicFunction:
+    active: false
+  AbsentOrWrongFileLicense:
+    active: false
+
+performance:
+  active: true
+  SpreadOperator:
+    active: false
+
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+
+formatting:
+  active: false   # delegated to ktlint — do not double-report

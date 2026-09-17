@@ -1,0 +1,594 @@
+/* ============================================================================
+ * StyleDrop — Theme System  (theme.css)
+ * ----------------------------------------------------------------------------
+ * Source of truth: the native Android/Compose theme in
+ *   app/src/main/java/com/example/ui/theme/Color.kt
+ *   app/src/main/java/com/example/ui/theme/Theme.kt
+ *   app/src/main/java/com/example/ui/theme/Type.kt
+ *   app/src/main/java/com/example/ui/theme/Modifiers.kt
+ *
+ * This stylesheet mirrors that palette / spacing / type scale for the web
+ * surface (PWA, marketing pages, share-outfit links) so the two stay in sync.
+ *
+ * Layers
+ *   1. Palette      --sd-*        (raw values, swapped per mode)
+ *   2. Semantic     --color-*     (what components consume — NEVER use palette
+ *                                  tokens directly in components)
+ *   3. Scale        --space-*, --font-*, --radius-*, --shadow-*, --motion-*
+ *   4. Modes        light / dark / auto, high-contrast, reduced-motion
+ *
+ * Rule of thumb: components talk only to the semantic layer.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ * 1+2. PALETTE + SEMANTIC TOKENS — LIGHT (default, brand is light-first)
+ * ------------------------------------------------------------------------- */
+:root {
+  /* ---- 1. Palette primitives (light) ---- */
+  --sd-bg:          #FAF7F0;  /* BackgroundLight  — ivory              */
+  --sd-surface:     #FFFFFF;  /* SurfaceLight     — card white         */
+  --sd-surface-alt: #F1ECE1;  /* SurfaceAltLight  — warm sand / chips  */
+  --sd-ink:         #1B1A17;  /* InkLight         — near-black ink     */
+  --sd-ink-soft:    #4A463E;  /* InkSoftLight                          */
+  --sd-muted:       #837B6C;  /* MutedTextLight   — captions           */
+  --sd-line:        #E7E0D2;  /* LineLight        — hairline dividers  */
+  --sd-accent:      #6B6355;  /* AccentLight                           */
+  --sd-gold:        #B08A4F;  /* GoldLight        — refined gold (brand) */
+  --sd-gold-ui:     #AC8748;  /* brand gold nudged to clear 3:1 on ivory (SC 1.4.11) */
+  --sd-chip:        #F1ECE1;  /* ChipBgLight                           */
+  --sd-danger:      #B5533C;  /* error (Light)                         */
+  --sd-ok:          #4F7A52;  /* derived: in-hue success (see docs)    */
+  --sd-muted-aa:    #776D5C;  /* AA derivative of --sd-muted: 4.76:1 on ivory, 5.09:1 on white */
+  --sd-focus:       #A07C42;  /* gold darkened so the focus ring clears 3:1 on ivory (SC 1.4.11) */
+
+  /* ---- 2. SEMANTIC TOKENS (the only layer components may consume) ---- */
+
+  /* Surfaces */
+  --color-page-bg:        var(--sd-bg);
+  --color-surface:        var(--sd-surface);
+  --color-surface-alt:    var(--sd-surface-alt);
+  --color-chip-bg:        var(--sd-chip);
+  --color-overlay:        rgb(27 26 23 / 0.45);
+
+  /* Text */
+  --color-text:           var(--sd-ink);       /* headings + body      */
+  --color-text-soft:      var(--sd-ink-soft);  /* secondary body       */
+  --color-text-muted:     var(--sd-muted-aa);  /* captions / hints (AA) */
+  --color-text-inverse:   var(--sd-bg);        /* on ink-filled buttons */
+
+  /* Lines + focus */
+  --color-border:         var(--sd-line);
+  --color-divider:        var(--sd-line);
+  --color-focus-ring:     var(--sd-focus);
+  --color-focus-ring-off: var(--sd-bg);
+  --focus-ring-width:     2px;
+
+  /* Brand / action */
+  --color-brand-ink:      var(--sd-ink);       /* "primary" in Compose */
+  --color-on-brand-ink:   var(--sd-bg);
+  --color-accent:         var(--sd-gold-ui);   /* "secondary"; UI-safe variant of the gold */
+  --color-accent-display: var(--sd-gold);      /* large text / decorative fills only */
+  --color-on-accent:      var(--sd-ink);
+  --color-accent-quiet:   var(--sd-accent);
+  --color-danger:         var(--sd-danger);
+  --color-on-danger:      #FFFFFF;
+  --color-success:        var(--sd-ok);
+  --color-warning:        #B07D2A;
+
+  /* ---- GARMENT / SWATCH TOKENS -------------------------------------------
+   * CRITICAL: a garment's own colour (denim navy, oxblood leather, that exact
+   * olive tee) is PRODUCT DATA, not a theme value. It must render identically
+   * in light, dark and high-contrast. So:
+   *   - --color-garment-base  = the neutral checkerboard backing a photo sits on
+   *   - --color-garment-true  = NEVER themed (set inline from the DB value)
+   *   - --color-garment-ink   = legible label colour for text ON a swatch
+   * --------------------------------------------------------------------- */
+  --color-garment-base:      #FFFFFF;   /* neutral backing — no brand tint */
+  --color-garment-alt:       #E9E9E9;   /* checkerboard square 2          */
+  --color-garment-border:    #D8D2C6;   /* keeps pale garments visible    */
+  --color-garment-plate:     var(--sd-surface);
+  --color-garment-label:     var(--sd-ink);
+  --color-garment-label-mut: var(--sd-muted);
+  --color-garment-shadow:    0 1px 2px rgb(27 26 23 / .18);
+  --color-garment-true:      #8A8A8A;   /* fallback when UNKNOWN colour   */
+  --color-garment-meta-bg:   rgb(255 255 255 / .82);
+  --color-garment-meta-ink:  #1B1A17;   /* fixed: sits over product photo */
+
+  /* ---- 3. SPACING (mirrors the .dp paddings used across the screens) ---- */
+  --space-0:  0px;
+  --space-1:  2px;
+  --space-2:  4px;
+  --space-3:  8px;
+  --space-4:  12px;
+  --space-5:  14px;
+  --space-6:  16px;
+  --space-7:  18px;
+  --space-8:  20px;   /* screen gutter */
+  --space-9:  24px;
+  --space-10: 32px;
+  --space-11: 40px;
+  --space-12: 48px;
+
+  /* ---- RADII (premiumCard = 20dp, FAB = 16dp) ---- */
+  --radius-xs:   6px;
+  --radius-sm:   8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-card: 20px;
+  --radius-pill: 999px;
+
+  /* ---- TYPOGRAPHY (Type.kt: Playfair Display + Inter) ---- */
+  --font-family-display: "Playfair Display", "Times New Roman", serif;
+  --font-family-text:    "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono:    ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+
+  --font-size-display-lg: 34px;  /* displayLarge  */
+  --font-size-display-md: 26px;  /* displayMedium */
+  --font-size-headline:   22px;  /* headlineMedium */
+  --font-size-title-lg:   18px;
+  --font-size-title-md:   15px;
+  --font-size-body-lg:    15px;
+  --font-size-body-md:    13px;
+  --font-size-body-sm:    11px;
+  --font-size-label:      13px;
+
+  --line-height-display:  1.15;
+  --line-height-headline: 1.27;   /* 28sp / 22sp */
+  --line-height-body-lg:  1.53;   /* 23sp / 15sp */
+  --line-height-body-md:  1.38;   /* 18sp / 13sp */
+  --line-height-body-sm:  1.4;
+
+  --letter-spacing-display: -0.5px;
+  --letter-spacing-title:    0.2px;
+  --letter-spacing-label:    0.8px;
+
+  /* ---- ELEVATION (Modifiers.kt shadow 8dp) ---- */
+  --shadow-card:  0 8px 24px rgb(0 0 0 / .07), 0 2px 6px rgb(0 0 0 / .05);
+  --shadow-raised:0 4px 12px rgb(0 0 0 / .08);
+  --shadow-fab:   0 6px 16px rgb(0 0 0 / .16);
+  --card-border-width: 1px;
+  --card-border-alpha: 0.4;
+
+  /* ---- MOTION ---- */
+  --motion-instant: 0ms;
+  --motion-fast:    120ms;
+  --motion-base:    200ms;
+  --motion-slow:    320ms;
+  --ease-standard:  cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasis:  cubic-bezier(0.3, 0, 0.1, 1);
+
+  /* ---- LAYOUT ---- */
+  --layout-gutter:        var(--space-8);
+  --layout-max-content:   1120px;
+  --layout-tap-target:    48px;
+  --z-header: 100;
+  --z-overlay: 200;
+  --z-toast:  300;
+
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------------
+ * DARK MODE
+ * Applied by <html data-theme="dark">. theme-switcher.js always writes the
+ * RESOLVED mode, so "auto" never lands on the attribute; the media query below
+ * is a no-JS fallback only.
+ * ------------------------------------------------------------------------- */
+html[data-theme="dark"] {
+  --sd-bg:          #16150F;  /* BackgroundDark  */
+  --sd-surface:     #201E17;  /* SurfaceDark     */
+  --sd-surface-alt: #2A281F;  /* SurfaceAltDark  */
+  --sd-ink:         #F3EEE2;  /* InkDark         */
+  --sd-ink-soft:    #CFC8B8;  /* InkSoftDark     */
+  --sd-muted:       #9A9384;  /* MutedTextDark   */
+  --sd-line:        #35322A;  /* LineDark        */
+  --sd-accent:      #BFB39C;  /* AccentDark      */
+  --sd-gold:        #CBA870;  /* GoldDark        */
+  --sd-chip:        #2A281F;  /* ChipBgDark      */
+  --sd-danger:      #D1745C;  /* error (Dark)    */
+  --sd-ok:          #8FBF92;
+  --sd-muted-aa:    #9A9384;  /* dark muted already clears AA (5.99:1) */
+  --sd-focus:       #CBA870;  /* dark gold clears 8.16:1 on #16150F  */
+
+  --color-overlay:      rgb(0 0 0 / 0.62);
+  --color-on-danger:    #16150F;
+  --color-warning:      #E0B25C;
+
+  /* Garment backing: the checkerboard must NOT glow white in dark mode.
+     It is deliberately mode-neutral (both squares stay in the mid-grey band)
+     so that pale and deep garments keep the same relative contrast. */
+  --color-garment-base:      #E6E6E6;
+  --color-garment-alt:       #D2D2D2;
+  --color-garment-border:    #6E6E6E;
+  --color-garment-plate:     #1B1A13;
+  --color-garment-label:     #1B1A17;   /* fixed: plate is mode-neutral light grey */
+  --color-garment-caption:   var(--sd-muted-aa);  /* text UNDER the plate, on the card */
+  --color-garment-shadow:    0 1px 2px rgb(0 0 0 / .55);
+  --color-garment-meta-bg:   rgb(20 19 15 / .86);
+  --color-garment-meta-ink:  #F7F3EA;
+
+  --shadow-card:   0 8px 24px rgb(0 0 0 / .45), 0 2px 6px rgb(0 0 0 / .3);
+  --shadow-raised: 0 4px 12px rgb(0 0 0 / .4);
+  --shadow-fab:    0 6px 16px rgb(0 0 0 / .5);
+  --card-border-alpha: 0.55;
+
+  color-scheme: dark;
+}
+
+/* No-JS fallback: follow the OS when nothing has been resolved yet. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]),
+  html[data-theme="auto"] {
+    --sd-bg:          #16150F;
+    --sd-surface:     #201E17;
+    --sd-surface-alt: #2A281F;
+    --sd-ink:         #F3EEE2;
+    --sd-ink-soft:    #CFC8B8;
+    --sd-muted:       #9A9384;
+    --sd-line:        #35322A;
+    --sd-accent:      #BFB39C;
+    --sd-gold:        #CBA870;
+    --sd-chip:        #2A281F;
+    --sd-danger:      #D1745C;
+    --sd-ok:          #8FBF92;
+    --sd-muted-aa:    #9A9384;
+    --sd-focus:       #CBA870;
+    --color-garment-base:     #E6E6E6;
+    --color-garment-alt:      #D2D2D2;
+    --color-garment-border:   #6E6E6E;
+    --color-garment-plate:    #1B1A13;
+    --color-garment-label:    #1B1A17;
+    --color-garment-caption:  var(--sd-muted-aa);
+    --color-garment-meta-bg:  rgb(20 19 15 / .86);
+    --color-garment-meta-ink: #F7F3EA;
+    --color-overlay: rgb(0 0 0 / 0.62);
+    color-scheme: dark;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * HIGH-CONTRAST / ACCESSIBILITY MODE   <html data-contrast="high">
+ * Drops the warm palette for pure black-on-white / white-on-black, thickens
+ * borders, kills shadows and enlarges focus rings. WCAG AAA (7:1) on text.
+ * Declared AFTER the mode blocks so it always wins.
+ * ------------------------------------------------------------------------- */
+html[data-contrast="high"] {
+  --sd-bg:          #FFFFFF;
+  --sd-surface:     #FFFFFF;
+  --sd-surface-alt: #F2F2F2;
+  --sd-ink:         #000000;
+  --sd-ink-soft:    #000000;
+  --sd-muted:       #1A1A1A;
+  --sd-line:        #000000;
+  --sd-accent:      #000000;
+  --sd-gold:        #6B4E00;   /* ≥7:1 on white, still reads as "gold" */
+  --sd-chip:        #F2F2F2;
+  --sd-danger:      #8B1A00;
+  --sd-ok:          #145214;
+  --sd-muted-aa:    #1A1A1A;
+  --sd-focus:       #0000EE;
+
+  --color-focus-ring:     #0000EE;
+  --color-focus-ring-off: #FFFFFF;
+  --focus-ring-width:     3px;
+  --color-link:           #0000EE;
+
+  --color-garment-base:   #FFFFFF;
+  --color-garment-alt:    #FFFFFF;   /* checkerboard off — pattern is noise */
+  --color-garment-border: #000000;
+  --color-garment-plate:  #FFFFFF;
+  --color-garment-label:  #000000;
+  --color-garment-meta-bg: rgb(255 255 255 / .95);
+  --color-garment-meta-ink:#000000;
+
+  --card-border-width: 2px;
+  --card-border-alpha: 1;
+  --shadow-card:   none;
+  --shadow-raised: none;
+  --shadow-fab:    none;
+  --color-overlay: rgb(0 0 0 / .72);
+  color-scheme: light;
+}
+
+html[data-theme="dark"][data-contrast="high"] {
+  --sd-bg:          #000000;
+  --sd-surface:     #000000;
+  --sd-surface-alt: #141414;
+  --sd-ink:         #FFFFFF;
+  --sd-ink-soft:    #FFFFFF;
+  --sd-muted:       #E6E6E6;
+  --sd-line:        #FFFFFF;
+  --sd-accent:      #FFFFFF;
+  --sd-gold:        #FFD98A;
+  --sd-chip:        #141414;
+  --sd-danger:      #FF9E86;
+  --sd-ok:          #A8F0AC;
+  --sd-muted-aa:    #E6E6E6;
+  --sd-focus:       #7FD4FF;
+
+  --color-focus-ring:     #7FD4FF;
+  --color-focus-ring-off: #000000;
+  --color-link:           #7FD4FF;
+  --color-garment-base:   #000000;
+  --color-garment-alt:    #000000;
+  --color-garment-border: #FFFFFF;
+  --color-garment-plate:  #000000;
+  --color-garment-label:  #FFFFFF;
+  --color-garment-meta-bg: rgb(0 0 0 / .95);
+  --color-garment-meta-ink:#FFFFFF;
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+ * REDUCED MOTION   <html data-motion="reduced">  (+ OS preference fallback)
+ * ------------------------------------------------------------------------- */
+html[data-motion="reduced"],
+html[data-motion="reduced"] * {
+  --motion-fast:    0ms;
+  --motion-base:    0ms;
+  --motion-slow:    0ms;
+  --motion-instant: 0ms;
+}
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion]),
+  html[data-motion="auto"] {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+  html:not([data-motion]) *,
+  html:not([data-motion]) *::before,
+  html:not([data-motion]) *::after,
+  html[data-motion="auto"] *,
+  html[data-motion="auto"] *::before,
+  html[data-motion="auto"] *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Windows High Contrast / forced-colors — hand back to the OS. */
+@media (forced-colors: active) {
+  :root {
+    --color-focus-ring: Highlight;
+    --color-garment-border: CanvasText;
+    --color-garment-base: Canvas;
+    --color-garment-alt: Canvas;
+    --sd-line: CanvasText;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * BASE ELEMENT STYLES
+ * ------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background-color: var(--color-page-bg); }
+
+body {
+  margin: 0;
+  background-color: var(--color-page-bg);
+  color: var(--color-text);
+  font-family: var(--font-family-text);
+  font-size: var(--font-size-body-lg);
+  line-height: var(--line-height-body-lg);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--motion-base) var(--ease-standard),
+              color var(--motion-base) var(--ease-standard);
+}
+
+h1, h2, h3 { font-family: var(--font-family-display); font-weight: var(--font-weight-semibold); margin: 0; }
+h1 { font-size: var(--font-size-display-lg); letter-spacing: var(--letter-spacing-display); line-height: var(--line-height-display); }
+h2 { font-size: var(--font-size-display-md); line-height: var(--line-height-display); }
+h3 { font-size: var(--font-size-headline); line-height: var(--line-height-headline); }
+
+a { color: var(--color-link, var(--color-accent)); }
+
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 calc(var(--focus-ring-width) + 1px) var(--color-focus-ring-off);
+  border-radius: var(--radius-xs);
+}
+
+.sd-visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * COMPONENT PRIMITIVES  (parity with premiumCard(), stat tiles, chips, tabs)
+ * ------------------------------------------------------------------------- */
+.sd-card {
+  background: var(--color-surface);
+  border: var(--card-border-width) solid
+          color-mix(in srgb, var(--color-border) calc(var(--card-border-alpha) * 100%), transparent);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-7);
+  transition: box-shadow var(--motion-base) var(--ease-standard),
+              background-color var(--motion-base) var(--ease-standard);
+}
+
+.sd-btn {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  min-height: var(--layout-tap-target);
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  font-family: var(--font-family-text);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-label);
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--ease-standard),
+              background-color var(--motion-base) var(--ease-standard);
+}
+.sd-btn--primary { background: var(--color-brand-ink); color: var(--color-on-brand-ink); }
+.sd-btn--accent  { background: var(--color-accent);    color: var(--color-on-accent); }
+.sd-btn--ghost   { background: transparent; color: var(--color-text); border-color: var(--color-border); }
+.sd-btn:hover { transform: translateY(-1px); }
+.sd-btn:active { transform: translateY(0); }
+html[data-motion="reduced"] .sd-btn:hover { transform: none; }
+
+.sd-chip {
+  background: var(--color-chip-bg);
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--font-size-body-md);
+}
+.sd-chip[aria-pressed="true"] { background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); }
+
+.sd-divider { height: 1px; background: var(--color-divider); border: 0; margin: 0; }
+
+/* Segmented theme switch — built from buttons with aria-pressed */
+.sd-theme-switch {
+  display: inline-flex; gap: var(--space-1); padding: var(--space-1);
+  background: var(--color-surface-alt); border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+.sd-theme-switch button {
+  appearance: none; border: 0; background: transparent; color: var(--color-text-soft);
+  min-height: 36px; min-width: 44px; padding: 0 var(--space-4);
+  border-radius: var(--radius-pill); cursor: pointer;
+  font-family: var(--font-family-text); font-size: var(--font-size-body-md);
+  transition: background-color var(--motion-base) var(--ease-standard);
+}
+.sd-theme-switch button[aria-pressed="true"] {
+  background: var(--color-surface); color: var(--color-text);
+  box-shadow: var(--shadow-raised);
+}
+
+/* ---------------------------------------------------------------------------
+ * GARMENT / WARDROBE COMPONENTS
+ * The photo/true-colour plate is never tinted by the theme.
+ * ------------------------------------------------------------------------- */
+.sd-garment-grid {
+  display: grid; gap: var(--space-6);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.sd-garment-card {
+  background: var(--color-surface);
+  border: var(--card-border-width) solid
+          color-mix(in srgb, var(--color-border) calc(var(--card-border-alpha) * 100%), transparent);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+.sd-garment-card:hover { transform: translateY(-2px); }
+html[data-motion="reduced"] .sd-garment-card:hover { transform: none; }
+
+/* The plate: neutral backing so garments can never be colour-shifted */
+.sd-garment-card__plate {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  display: grid; place-items: center;
+  background-color: var(--color-garment-base);
+  background-image:
+    linear-gradient(45deg, var(--color-garment-alt) 25%, transparent 25%,
+                            transparent 75%, var(--color-garment-alt) 75%),
+    linear-gradient(45deg, var(--color-garment-alt) 25%, transparent 25%,
+                            transparent 75%, var(--color-garment-alt) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+  border-bottom: 1px solid var(--color-garment-border);
+}
+.sd-garment-card__plate img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.sd-garment-card__meta {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+.sd-garment-card__title { font-size: var(--font-size-title-md); font-weight: var(--font-weight-semibold); color: var(--color-text); }
+.sd-garment-card__sub   { font-size: var(--font-size-body-md); color: var(--color-text-muted); margin-top: var(--space-1); }
+
+/* Overlay badges that sit ON the photo: fixed ink, never themed, because the
+   photo's own luminance does not change with the app theme. */
+.sd-garment-card__badge {
+  position: absolute; top: var(--space-3); left: var(--space-3);
+  background: var(--color-garment-meta-bg);
+  color: var(--color-garment-meta-ink);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-label);
+  backdrop-filter: blur(6px);
+}
+
+/* --- TRUE-COLOUR SWATCH -------------------------------------------------- */
+.sd-swatch {
+  --swatch-size: 40px;
+  position: relative;
+  display: inline-grid; place-items: center;
+  width: var(--swatch-size); height: var(--swatch-size);
+  border-radius: var(--radius-pill);
+  /* checkerboard shows through for translucent / "unknown" colours */
+  background-color: var(--color-garment-base);
+  background-image:
+    linear-gradient(45deg, var(--color-garment-alt) 25%, transparent 25%,
+                            transparent 75%, var(--color-garment-alt) 75%),
+    linear-gradient(45deg, var(--color-garment-alt) 25%, transparent 25%,
+                            transparent 75%, var(--color-garment-alt) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+  border: 2px solid var(--color-garment-border);
+  box-shadow: var(--color-garment-shadow);
+  transition: none; /* colour-critical: never animate a garment colour */
+}
+
+/* The garment's real colour is painted by an inner disc using the inline
+   --garment-color custom property (set from WardrobeItem.color). */
+.sd-swatch::after {
+  content: "";
+  position: absolute; inset: 2px;
+  border-radius: inherit;
+  background-color: var(--garment-color, var(--color-garment-true));
+}
+
+/* Secondary colour (WardrobeItem.secondaryColor) as a split inner disc. */
+.sd-swatch[data-secondary]::before {
+  content: "";
+  position: absolute; inset: 2px; border-radius: inherit;
+  background: linear-gradient(90deg,
+      transparent 50%, var(--garment-color-secondary, transparent) 50%);
+}
+
+/* Legible label ON a swatch — JS writes data-swatch-tone from the measured
+   APCA/WCAG contrast of the real colour. */
+.sd-swatch__label {
+  position: relative; z-index: 1;
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--swatch-ink, #FFFFFF);
+  text-shadow: 0 1px 1px rgb(0 0 0 / .28);
+  pointer-events: none;
+}
+.sd-swatch[data-swatch-tone="light"] .sd-swatch__label { color: #FFFFFF; text-shadow: 0 1px 2px rgb(0 0 0 / .45); }
+.sd-swatch[data-swatch-tone="dark"]  .sd-swatch__label { color: #12110D; text-shadow: 0 1px 1px rgb(255 255 255 / .35); }
+
+.sd-swatch-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+
+/* In high contrast, drop the checkerboard (it is decorative noise) and the
+   colour still shows because ::after paints the true value. */
+html[data-contrast="high"] .sd-swatch { background-image: none; border-width: 3px; }
+html[data-contrast="high"] .sd-card,
+html[data-contrast="high"] .sd-garment-card { box-shadow: none; }

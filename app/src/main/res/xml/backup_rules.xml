@@ -1,13 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SECURITY (Agent #14):
+  allowBackup is FALSE in AndroidManifest.xml, so these rules are defence-in-depth
+  only (they also apply to device-to-device transfer via dataExtractionRules).
+  Nothing that can identify a person or reproduce their wardrobe is eligible.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="database" path="styledrop_database" />
+    <exclude domain="database" path="styledrop_database-wal" />
+    <exclude domain="database" path="styledrop_database-shm" />
+    <exclude domain="file" path="wardrobe_photos" />
+    <exclude domain="file" path="datastore" />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
 </full-backup-content>

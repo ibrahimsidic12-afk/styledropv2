@@ -27,7 +27,10 @@ import coil.compose.AsyncImage
 import com.example.models.AppConstants
 import com.example.models.ItemCategory
 import com.example.models.WardrobeItem
+import com.example.security.BiometricGate
+import com.example.security.SecurePhotoStore
 import com.example.ui.theme.premiumCard
+import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +42,9 @@ fun ItemDetailScreen(
     ),
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    val biometricGate = remember(activity) { activity?.let { BiometricGate(it) } }
     val coroutineScope = rememberCoroutineScope()
     var item by remember { mutableStateOf<WardrobeItem?>(null) }
     var editing by remember { mutableStateOf(false) }
@@ -71,9 +77,23 @@ fun ItemDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteItem(itemId)
-                        showDeleteDialog = false
-                        onNavigateBack()
+                        // SECURITY (Agent #14) item 6: destructive + irreversible action
+                        // behind a Keystore-bound biometric/credential gate. Fail closed.
+                        val gate = biometricGate
+                        if (gate == null || !gate.isAvailable()) {
+                            showDeleteDialog = false
+                            return@TextButton
+                        }
+                        gate.authenticate(
+                            reason = "Authenticate to remove this piece",
+                            onSuccess = {
+                                viewModel.deleteItem(itemId)
+                                SecurePhotoStore.delete(context, item?.imageUrl)
+                                showDeleteDialog = false
+                                onNavigateBack()
+                            },
+                            onUnavailable = { showDeleteDialog = false }
+                        )
                     }
                 ) {
                     Text("Delete")
@@ -139,7 +159,9 @@ fun ItemDetailScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             AsyncImage(
-                model = item!!.imageUrl,
+                // SECURITY (Agent #14) item 4: decrypt the EncryptedFile into
+                // app-private cache for rendering; legacy raw-Uri rows fall back.
+                model = SecurePhotoStore.resolveForDisplay(context, item!!.imageUrl),
                 contentDescription = item!!.type,
                 modifier = Modifier
                     .size(220.dp)

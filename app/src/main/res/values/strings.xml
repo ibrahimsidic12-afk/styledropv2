@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">StyleDrop</string>
+    <!-- SECURITY: biometric gate copy -->
+    <string name="biometric_title">Confirm it&#8217;s you</string>
+    <string name="biometric_subtitle">Your atelier is private. Unlock to continue.</string>
+    <string name="biometric_cancel">Cancel</string>
+    <string name="biometric_delete_reason">Authenticate to permanently remove this piece from your wardrobe.</string>
+    <string name="biometric_unavailable">No biometric or device credential is enrolled on this device.</string>
 </resources>

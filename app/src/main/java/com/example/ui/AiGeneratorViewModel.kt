@@ -2,19 +2,18 @@ package com.example.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ai.StylistAiService
 import com.example.models.WardrobeItem
-import com.example.network.Content
-import com.example.network.GenerateContentRequest
-import com.example.network.NetworkModule
-import com.example.network.Part
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 
-class AiGeneratorViewModel : ViewModel() {
+class AiGeneratorViewModel(
+    // SECURITY (Agent #14): the only outbound AI path. No API key exists on the client;
+    // the request is authorised by App Check (see StyleDropApplication).
+    private val stylist: StylistAiService = StylistAiService()
+) : ViewModel() {
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
 
@@ -64,22 +63,12 @@ class AiGeneratorViewModel : ViewModel() {
                     a brief explanation of why this outfit works.
                 """.trimIndent()
 
-                val request = GenerateContentRequest(
-                    contents = listOf(
-                        Content(parts = listOf(Part(text = prompt)))
-                    )
-                )
-
-                val response = NetworkModule.geminiApiService.generateContent(request = request)
-                val textResponse = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                
-                if (textResponse != null) {
-                    _generatedResult.value = textResponse
-                } else {
-                    _error.value = "Failed to generate outfit. Please try again."
-                }
+                stylist.generate(prompt)
+                    .onSuccess { text -> _generatedResult.value = text }
+                    .onFailure { _error.value = "The atelier is quiet right now. Please try again." }
             } catch (e: Exception) {
-                _error.value = "Error connecting to AI Stylist: ${e.message}\nMake sure your Gemini API Key is set in the Secrets panel."
+                // Never echo server/exception detail into the UI (information leak).
+                _error.value = "The atelier is quiet right now. Please try again."
             } finally {
                 _isGenerating.value = false
             }

@@ -1,8 +1,8 @@
 package com.example
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,7 +17,8 @@ import com.example.LoginScreen
 import com.example.ui.WardrobeScreen
 import com.example.ui.theme.MyApplicationTheme
 
-class MainActivity : ComponentActivity() {
+// SECURITY (Agent #14): FragmentActivity, required by androidx.biometric.BiometricPrompt.
+class MainActivity : FragmentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()

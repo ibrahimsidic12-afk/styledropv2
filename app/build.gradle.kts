@@ -20,9 +20,6 @@ android {
     versionCode = 1
     versionName = "1.0"
 
-    val apiKey = System.getenv("GEMINI_API_KEY") ?: "YOUR_API_KEY_HERE"
-    buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
-
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
@@ -45,7 +42,8 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
@@ -68,6 +66,10 @@ android {
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
+// SECURITY (Agent #14): the secrets plugin is retained for the App Check debug
+// token ONLY. GEMINI_API_KEY is no longer read, so no key can enter the APK.
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
@@ -115,7 +117,13 @@ dependencies {
   // implementation(libs.androidx.credentials.play.services)
   // implementation(libs.googleid)
   implementation(libs.firebase.appcheck.recaptcha)
+  implementation(libs.firebase.appcheck.playintegrity)
   implementation(libs.firebase.appcheck.debug)
+  implementation(libs.androidx.security.crypto)
+  implementation(libs.androidx.biometric)
+  implementation(libs.androidx.biometric.ktx)
+  implementation(libs.play.integrity)
+  implementation(libs.conscrypt.android)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
@@ -141,4 +149,20 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
+
+  // --- SECURITY (Agent #14) -------------------------------------------------
+  // Force a patched Okio. OkHttp 4.10.0 transitively pinned okio < 3.4.0, which
+  // is affected by CVE-2023-3635 (GzipSource infinite loop / DoS, CVSS 5.9).
+  constraints {
+    implementation(libs.okio) {
+      because("CVE-2023-3635: GzipSource DoS fixed in okio 3.4.0+; platform pinning enforced here")
+    }
+  }
+}
+
+configurations.all {
+  resolutionStrategy {
+    // Never let a transitive graph silently downgrade okio below the CVE fix.
+    force(libs.okio.get().toString())
+  }
 }

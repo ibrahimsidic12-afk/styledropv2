@@ -27,6 +27,8 @@ import coil.compose.AsyncImage
 import com.example.models.AppConstants
 import com.example.models.ItemCategory
 import com.example.models.WardrobeItem
+import com.example.security.SecurePhotoStore
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +39,7 @@ fun AddItemScreen(
     ),
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -154,8 +157,16 @@ fun AddItemScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     onClick = {
+                        // SECURITY (Agent #14): the picked Uri is copied into
+                        // app-private storage and encrypted; only the "enc://" token
+                        // is persisted. The raw Uri never reaches the database.
+                        val newId = UUID.randomUUID().toString()
+                        val storedRef = imageUri?.let {
+                            SecurePhotoStore.importFromUri(context, it, newId)
+                        } ?: ""
                         val newItem = WardrobeItem(
-                            imageUrl = imageUri.toString(),
+                            id = newId,
+                            imageUrl = storedRef,
                             category = category,
                             type = type.ifBlank { "Item" },
                             color = color.ifBlank { "Black" },

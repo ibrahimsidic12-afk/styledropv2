@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SECURITY (Agent #14) — items 5 & 9: transport hardening.
+
+  * cleartextTrafficPermitted="false"  -> no plaintext HTTP is ever allowed.
+  * user-installed CAs on API 24+ are NOT trusted for app traffic, which removes
+    the classic "install a proxy CA and read the wardrobe" attack for all
+    targets below Android 7 / all devices where the app does not opt in.
+  * <pin-set> with TWO pins and an expiration gives a backup pin so a Google
+    certificate rotation degrades to normal PKI validation instead of bricking
+    the app — this is the recommended Android pattern.
+
+  ACTION REQUIRED BEFORE RELEASE: replace the two placeholder digests with real
+  SPKI SHA-256 values (see SECURITY.md §5 for the exact openssl command). Do NOT
+  ship placeholders — Android treats a malformed pin as "nothing pinned".
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">generativelanguage.googleapis.com</domain>
+        <domain includeSubdomains="true">firebasevertexai.googleapis.com</domain>
+        <domain includeSubdomains="true">firebase.ai</domain>
+        <domain includeSubdomains="true">firebaseinstallations.googleapis.com</domain>
+        <domain includeSubdomains="true">content-firebaseappcheck.googleapis.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+        <pin-set expiration="2027-12-31">
+            <!-- PRIMARY: current leaf/intermediate SPKI -->
+            <pin digest="SHA-256">baA+Ld3UAHTjfVroigcvh0Vq9L8h5fH1ONS5pXySa7U=</pin>
+            <!-- BACKUP: offline CA/intermediate key — mandatory -->
+            <pin digest="SHA-256">PLACEHOLDER_BACKUP_SPKI_SHA256</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

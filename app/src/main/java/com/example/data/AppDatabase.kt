@@ -6,7 +6,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.models.WardrobeItem
 
-@Database(entities = [WardrobeItem::class], version = 2, exportSchema = false)
+// SECURITY (Agent #14): no fallbackToDestructiveMigration() — see Migrations.kt.
+
+@Database(entities = [WardrobeItem::class], version = 2, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun wardrobeDao(): WardrobeDao
 
@@ -21,7 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "styledrop_database"
                 )
-                .fallbackToDestructiveMigration()
+                .addMigrations(*ALL_MIGRATIONS)
                 .build()
                 INSTANCE = instance
                 instance

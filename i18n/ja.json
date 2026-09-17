@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "StyleDrop"
+  },
+  "common": {
+    "cancel": "キャンセル",
+    "delete": "削除"
+  },
+  "nav": {
+    "home": "ホーム",
+    "wardrobe": "クローゼット",
+    "ai": "AI",
+    "saved": "保存済み",
+    "profile": "プロフィール"
+  },
+  "login": {
+    "tagline": "あなたのAIクローゼットスタイリスト",
+    "signInToContinue": "サインインして続行",
+    "google": "Googleで続行",
+    "apple": "Appleで続行",
+    "email": "メールで続行",
+    "skip": "今はスキップ — ゲストとして続行"
+  },
+  "home": {
+    "greetingMorning": "おはようございます",
+    "greetingAfternoon": "こんにちは",
+    "greetingEvening": "こんばんは",
+    "greetingLate": "夜遅くまでお疲れさま",
+    "headline": "あなたのクローゼットを、もっと素敵に。",
+    "weatherLabel": "今日の天気 • 不明",
+    "weatherValue": "22°C • 晴れ時々曇り",
+    "wardrobeStatus": "クローゼットの状態",
+    "recommended": "おすすめのコーデ",
+    "recommendedHint": "トップス・ボトムス・シューズを追加すると、最初のおすすめコーデがここに表示されます。",
+    "generateCta": "コーデを作成"
+  },
+  "category": {
+    "tops": "トップス",
+    "bottoms": "ボトムス",
+    "shoes": "シューズ",
+    "outerwear": "アウター",
+    "accessories": "小物",
+    "bags": "バッグ",
+    "watches": "腕時計",
+    "jewelry": "ジュエリー"
+  },
+  "wardrobe": {
+    "title": "クローゼット",
+    "addItem": "アイテムを追加",
+    "emptyNoCategory": "{category}はまだありません",
+    "emptyHint": "「アイテムを追加」から写真を撮影またはアップロードしましょう。"
+  },
+  "item": {
+    "garmentCard": "アイテム:{type}、色 {color}、スタイル {style}。詳細はダブルタップ。",
+    "openItem": "アイテムの詳細を開く",
+    "deleteTitle": "アイテムを削除しますか？",
+    "deleteMessage": "このアイテムがクローゼットから削除されます。",
+    "category": "カテゴリ",
+    "type": "種類",
+    "color": "色",
+    "pattern": "パターン",
+    "style": "スタイル",
+    "fit": "フィット感",
+    "season": "シーズン",
+    "brand": "ブランド",
+    "worn": "着用回数",
+    "wornTimes": "{count, plural, other {#回}}"
+  },
+  "addItem": {
+    "title": "アイテムを追加",
+    "addACategory": "{category}を追加",
+    "uploadPhoto": "写真をアップロード",
+    "typeField": "種類（例：オーバーサイズTシャツ）",
+    "colorField": "色（例：黒）",
+    "brandField": "ブランド（任意）",
+    "save": "保存",
+    "selectedImage": "選択した画像"
+  },
+  "ai": {
+    "title": "AIスタイリスト",
+    "createTitle": "コーデを作成",
+    "occasion": "シーン",
+    "style": "スタイル",
+    "colorPref": "色の好み",
+    "weather": "天気",
+    "automatic": "自動",
+    "shoes": "シューズ",
+    "useMyWardrobe": "自分のクローゼットのみ使用",
+    "useMyWardrobeHint": "所有していないアイテムは提案しません",
+    "outfitCount": "コーデ数",
+    "generate": "コーデを作成",
+    "generating": "生成中…"
+  },
+  "saved": {
+    "title": "マイコーデ",
+    "calendar": "コーデカレンダー",
+    "mixMatch": "ミックス＆マッチ",
+    "emptyTitle": "保存されたコーデはまだありません",
+    "emptyHint": "AIスタイリストでコーデを作成して保存しましょう。"
+  },
+  "profile": {
+    "title": "プロフィール",
+    "guestName": "ゲストユーザー",
+    "guestAccount": "ゲストアカウント",
+    "freeBadge": "無料",
+    "itemsStat": "アイテム",
+    "outfitsStat": "作成したコーデ",
+    "settings": "設定",
+    "notifications": "通知",
+    "appearance": "外観",
+    "signInToSave": "サインインしてデータを保存"
+  },
+  "analytics": {
+    "title": "統計",
+    "stats": "クローゼットの統計",
+    "totalItems": "合計アイテム数",
+    "mostCommonColor": "最も多い色",
+    "byCategory": "カテゴリ別"
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "StyleDrop"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "delete": "Eliminar"
+  },
+  "nav": {
+    "home": "Inicio",
+    "wardrobe": "Armario",
+    "ai": "IA",
+    "saved": "Guardados",
+    "profile": "Perfil"
+  },
+  "login": {
+    "tagline": "Tu estilista de armario con IA",
+    "signInToContinue": "Inicia sesión para continuar",
+    "google": "Continuar con Google",
+    "apple": "Continuar con Apple",
+    "email": "Continuar con correo",
+    "skip": "Omitir por ahora — Continuar como invitado"
+  },
+  "home": {
+    "greetingMorning": "Buenos días",
+    "greetingAfternoon": "Buenas tardes",
+    "greetingEvening": "Buenas noches",
+    "greetingLate": "Trabajando hasta tarde",
+    "headline": "Tu armario, a tu medida.",
+    "weatherLabel": "El tiempo de hoy • Desconocido",
+    "weatherValue": "22°C • Parcialmente nublado",
+    "wardrobeStatus": "Estado del armario",
+    "recommended": "Atuendo recomendado",
+    "recommendedHint": "Añade una prenda de arriba, una de abajo y unos zapatos para ver aquí tu primer atuendo recomendado.",
+    "generateCta": "Generar un atuendo"
+  },
+  "category": {
+    "tops": "Tops",
+    "bottoms": "Bajos",
+    "shoes": "Zapatos",
+    "outerwear": "Abrigos",
+    "accessories": "Accesorios",
+    "bags": "Bolsos",
+    "watches": "Relojes",
+    "jewelry": "Joyas"
+  },
+  "wardrobe": {
+    "title": "Armario",
+    "addItem": "Añadir",
+    "emptyNoCategory": "Aún no hay {category}",
+    "emptyHint": "Toca \"Añadir\" para tomar o subir una foto."
+  },
+  "item": {
+    "garmentCard": "Prenda: {type}, color {color}, estilo {style}. Toca dos veces para ver los detalles.",
+    "openItem": "Abrir detalles del artículo",
+    "deleteTitle": "¿Eliminar artículo?",
+    "deleteMessage": "Esto eliminará el artículo de tu armario.",
+    "category": "Categoría",
+    "type": "Tipo",
+    "color": "Color",
+    "pattern": "Estampado",
+    "style": "Estilo",
+    "fit": "Ajuste",
+    "season": "Temporada",
+    "brand": "Marca",
+    "worn": "Usado",
+    "wornTimes": "{count, plural, one {# vez} other {# veces}}"
+  },
+  "addItem": {
+    "title": "Añadir artículo",
+    "addACategory": "Añadir {category}",
+    "uploadPhoto": "Subir foto",
+    "typeField": "Tipo (p. ej. camiseta oversized)",
+    "colorField": "Color (p. ej. negro)",
+    "brandField": "Marca (opcional)",
+    "save": "Guardar artículo",
+    "selectedImage": "Imagen seleccionada"
+  },
+  "ai": {
+    "title": "Estilista IA",
+    "createTitle": "Crea tu atuendo",
+    "occasion": "Ocasión",
+    "style": "Estilo",
+    "colorPref": "Preferencia de color",
+    "weather": "Clima",
+    "automatic": "Automático",
+    "shoes": "Zapatos",
+    "useMyWardrobe": "Usar solo mi armario",
+    "useMyWardrobeHint": "Nunca sugiere artículos que no tienes",
+    "outfitCount": "Número de atuendos",
+    "generate": "Generar atuendo",
+    "generating": "Generando…"
+  },
+  "saved": {
+    "title": "Mis atuendos",
+    "calendar": "Calendario de atuendos",
+    "mixMatch": "Mezclar y combinar",
+    "emptyTitle": "Aún no hay atuendos guardados",
+    "emptyHint": "Genera un atuendo con el Estilista IA y toca GUARDAR."
+  },
+  "profile": {
+    "title": "Perfil",
+    "guestName": "Usuario invitado",
+    "guestAccount": "Cuenta de invitado",
+    "freeBadge": "GRATIS",
+    "itemsStat": "Artículos",
+    "outfitsStat": "Atuendos creados",
+    "settings": "Ajustes",
+    "notifications": "Notificaciones",
+    "appearance": "Apariencia",
+    "signInToSave": "Inicia sesión para guardar datos"
+  },
+  "analytics": {
+    "title": "Estadísticas",
+    "stats": "Estadísticas del armario",
+    "totalItems": "Total de artículos",
+    "mostCommonColor": "Color más común",
+    "byCategory": "Por categoría"
+  }
+}

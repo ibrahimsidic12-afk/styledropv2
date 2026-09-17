@@ -38,7 +38,9 @@ val Typography = Typography(
     headlineMedium = TextStyle(
         fontFamily = PlayfairDisplayFont,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp
+        fontSize = 22.sp,
+        letterSpacing = 0.sp,
+        lineHeight = 28.sp
     ),
     titleLarge = TextStyle(
         fontFamily = InterFont,
@@ -55,7 +57,7 @@ val Typography = Typography(
         fontFamily = InterFont,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
-        lineHeight = 21.sp
+        lineHeight = 23.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = InterFont,

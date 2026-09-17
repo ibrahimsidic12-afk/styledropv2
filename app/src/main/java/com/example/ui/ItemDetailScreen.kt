@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,6 +27,7 @@ import coil.compose.AsyncImage
 import com.example.models.AppConstants
 import com.example.models.ItemCategory
 import com.example.models.WardrobeItem
+import com.example.ui.theme.premiumCard
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,7 +90,11 @@ fun ItemDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(item!!.type) },
+                title = { Text(item!!.type, style = MaterialTheme.typography.displayMedium) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                ),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
@@ -136,6 +143,7 @@ fun ItemDetailScreen(
                 contentDescription = item!!.type,
                 modifier = Modifier
                     .size(220.dp)
+                    .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x14000000))
                     .clip(RoundedCornerShape(24.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
@@ -144,17 +152,33 @@ fun ItemDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             if (!editing) {
-                InfoRow("Category", "${ItemCategory.emoji(item!!.category)} ${item!!.category}")
-                InfoRow("Type", item!!.type)
-                InfoRow("Color", item!!.color)
-                InfoRow("Pattern", item!!.pattern)
-                InfoRow("Style", item!!.style)
-                InfoRow("Fit", item!!.fit)
-                InfoRow("Season", item!!.season)
-                if (item!!.brand.isNotEmpty()) {
-                    InfoRow("Brand", item!!.brand)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .premiumCard()
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                ) {
+                    InfoRow("Category", "${ItemCategory.emoji(item!!.category)} ${item!!.category}")
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    InfoRow("Type", item!!.type)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    InfoRow("Color", item!!.color)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    InfoRow("Pattern", item!!.pattern)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    InfoRow("Style", item!!.style)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    InfoRow("Fit", item!!.fit)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    InfoRow("Season", item!!.season)
+                    if (item!!.brand.isNotEmpty()) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                        InfoRow("Brand", item!!.brand)
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    InfoRow("Worn", "${item!!.timesWorn} times")
                 }
-                InfoRow("Worn", "${item!!.timesWorn} times")
+                Spacer(modifier = Modifier.height(32.dp))
             } else {
                 DropdownField("Category", category, ItemCategory.all) { category = it }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -190,18 +214,18 @@ fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
     }

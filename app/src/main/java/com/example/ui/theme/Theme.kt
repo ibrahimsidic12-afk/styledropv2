@@ -11,6 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 
+import androidx.compose.ui.platform.LocalView
+import android.app.Activity
+import androidx.core.view.WindowCompat
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+
 private val DarkColorScheme = darkColorScheme(
     primary = InkDark,
     onPrimary = BackgroundDark,
@@ -43,7 +49,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun MyApplicationTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // light-first brand
     dynamicColor: Boolean = false, // Disabled by default to preserve the StyleDrop brand
     content: @Composable () -> Unit,
 ) {
@@ -54,6 +60,16 @@ fun MyApplicationTheme(
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = BackgroundLight.toArgb()
+            WindowCompat.getInsetsController(window, view)
+                .isAppearanceLightStatusBars = true   // dark icons on ivory
+        }
     }
 
     MaterialTheme(

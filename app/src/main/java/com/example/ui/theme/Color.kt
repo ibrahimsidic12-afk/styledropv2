@@ -2,17 +2,17 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light Theme Colors
-val BackgroundLight = Color(0xFFF7F3EC)
-val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceAltLight = Color(0xFFEFE9DE)
-val InkLight = Color(0xFF1C1B19)
-val InkSoftLight = Color(0xFF4A463E)
-val MutedTextLight = Color(0xFF7A7365)
-val LineLight = Color(0xFFE3DCCE)
-val AccentLight = Color(0xFF6B6355)
-val GoldLight = Color(0xFFB89664)
-val ChipBgLight = Color(0xFFEFE9DE)
+// Light Theme Colors — ivory / quiet-luxury
+val BackgroundLight  = Color(0xFFFAF7F0)  // slightly brighter ivory (was F7F3EC)
+val SurfaceLight     = Color(0xFFFFFFFF)  // pure white cards pop off the ivory
+val SurfaceAltLight  = Color(0xFFF1ECE1)  // warm sand for chips / alt panels
+val InkLight         = Color(0xFF1B1A17)  // near-black ink for headings
+val InkSoftLight     = Color(0xFF4A463E)
+val MutedTextLight   = Color(0xFF837B6C)  // captions
+val LineLight        = Color(0xFFE7E0D2)  // hairline dividers
+val AccentLight      = Color(0xFF6B6355)
+val GoldLight        = Color(0xFFB08A4F)  // deeper, more refined gold (was B89664)
+val ChipBgLight      = Color(0xFFF1ECE1)
 
 // Dark Theme Colors
 val BackgroundDark = Color(0xFF16150F)

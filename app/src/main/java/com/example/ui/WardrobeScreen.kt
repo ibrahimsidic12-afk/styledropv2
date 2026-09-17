@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,7 +48,11 @@ fun WardrobeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Wardrobe") },
+                title = { Text("Wardrobe", style = MaterialTheme.typography.displayMedium) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                ),
                 actions = {
                     IconButton(onClick = onAnalyticsClick) {
                         Icon(Icons.Rounded.BarChart, contentDescription = "Analytics")
@@ -61,6 +66,7 @@ fun WardrobeScreen(
                     val currentCategory = ItemCategory.all[pagerState.currentPage]
                     onAddItemClick(currentCategory)
                 },
+                shape = RoundedCornerShape(16.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
@@ -92,7 +98,8 @@ fun WardrobeScreen(
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                         text = {
                             Text(
-                                text = "${ItemCategory.emoji(category)} $category ($count)",
+                                text = "${category.lowercase().replaceFirstChar { it.uppercase() }}  $count",
+                                style = MaterialTheme.typography.titleMedium,
                                 color = if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -137,7 +144,7 @@ fun CategoryGrid(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "No $category yet",
+                text = "No ${category.lowercase()} yet",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -176,6 +183,7 @@ fun ItemCard(
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
+                .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0x14000000))
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
@@ -186,7 +194,7 @@ fun ItemCard(
                 modifier = Modifier.fillMaxSize()
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = item.type.ifBlank { item.style },
             maxLines = 1,

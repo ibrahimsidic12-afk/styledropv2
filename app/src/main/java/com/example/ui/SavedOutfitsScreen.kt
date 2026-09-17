@@ -17,7 +17,11 @@ fun SavedOutfitsScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Outfits") },
+                title = { Text("My Outfits", style = MaterialTheme.typography.displayMedium) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                ),
                 actions = {
                     IconButton(onClick = { /* TODO: Calendar */ }) {
                         Icon(Icons.Rounded.CalendarMonth, contentDescription = "Outfit Calendar")

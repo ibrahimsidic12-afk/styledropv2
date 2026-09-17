@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -17,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,7 +55,11 @@ fun AddItemScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Item") },
+                title = { Text("Add Item", style = MaterialTheme.typography.displayMedium) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                ),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
@@ -65,7 +72,7 @@ fun AddItemScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -75,8 +82,8 @@ fun AddItemScreen(
                 Text("📸", style = MaterialTheme.typography.displayLarge)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Add a $category item",
-                    style = MaterialTheme.typography.headlineMedium
+                    text = "Add a ${category.lowercase()}",
+                    style = MaterialTheme.typography.displayMedium
                 )
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
@@ -87,12 +94,16 @@ fun AddItemScreen(
                             )
                         )
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
-                    Icon(Icons.Rounded.Image, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("UPLOAD PHOTO")
+                    Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Upload photo", style = MaterialTheme.typography.labelLarge)
                 }
             } else {
                 AsyncImage(
@@ -100,6 +111,7 @@ fun AddItemScreen(
                     contentDescription = "Selected Image",
                     modifier = Modifier
                         .size(200.dp)
+                        .shadow(4.dp, MaterialTheme.shapes.large, spotColor = Color(0x14000000))
                         .clip(MaterialTheme.shapes.large)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = ContentScale.Crop
@@ -156,11 +168,14 @@ fun AddItemScreen(
                         viewModel.addItem(newItem)
                         onNavigateBack()
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    contentPadding = PaddingValues(vertical = 16.dp)
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
-                    Text("SAVE ITEM")
+                    Text("Save item", style = MaterialTheme.typography.labelLarge)
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }

@@ -1,5 +1,7 @@
 package com.example.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,6 +20,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun MainShell(
@@ -37,7 +41,10 @@ fun MainShell(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
                 items.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = {
@@ -46,27 +53,34 @@ fun MainShell(
                                 contentDescription = item.label
                             )
                         },
-                        label = { Text(item.label) },
+                        label = { Text(item.label, style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 0.2.sp)) },
                         selected = selectedIndex == index,
-                        onClick = { selectedIndex = index }
+                        onClick = { selectedIndex = index },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            indicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
             }
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()).fillMaxSize()) {
-            when (selectedIndex) {
-                0 -> HomeScreen(
-                    onNavigateToAI = { selectedIndex = 2 }
-                )
-                1 -> WardrobeScreen(
-                    onItemClick = onItemClick,
-                    onAddItemClick = onAddItemClick,
-                    onAnalyticsClick = onAnalyticsClick
-                )
-                2 -> AiGeneratorScreen()
-                3 -> SavedOutfitsScreen()
-                4 -> ProfileScreen()
+            Crossfade(targetState = selectedIndex, animationSpec = tween(250), label = "ScreenTransition") { screen ->
+                when (screen) {
+                    0 -> HomeScreen(
+                        onNavigateToAI = { selectedIndex = 2 }
+                    )
+                    1 -> WardrobeScreen(
+                        onItemClick = onItemClick,
+                        onAddItemClick = onAddItemClick,
+                        onAnalyticsClick = onAnalyticsClick
+                    )
+                    2 -> AiGeneratorScreen()
+                    3 -> SavedOutfitsScreen()
+                    4 -> ProfileScreen()
+                }
             }
         }
     }

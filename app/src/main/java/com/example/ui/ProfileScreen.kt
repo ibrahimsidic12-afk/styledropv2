@@ -11,8 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.ui.theme.premiumCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +22,11 @@ fun ProfileScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile") }
+                title = { Text("Profile", style = MaterialTheme.typography.displayMedium) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         }
     ) { paddingValues ->
@@ -37,6 +43,7 @@ fun ProfileScreen() {
                 Box(
                     modifier = Modifier
                         .size(64.dp)
+                        .shadow(4.dp, CircleShape, spotColor = androidx.compose.ui.graphics.Color(0x14000000))
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
@@ -50,14 +57,14 @@ fun ProfileScreen() {
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text("Guest User", style = MaterialTheme.typography.titleLarge)
-                    Text("Guest account", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Guest User", style = MaterialTheme.typography.displayMedium)
+                    Text("Guest account", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = "FREE",
@@ -73,12 +80,37 @@ fun ProfileScreen() {
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatBox(modifier = Modifier.weight(1f), value = "0", label = "Items")
-                StatBox(modifier = Modifier.weight(1f), value = "0", label = "Outfits Made")
+                StatBox(modifier = Modifier.weight(1f), value = "0", label = "Outfits made")
             }
             
             Spacer(modifier = Modifier.height(32.dp))
-            Text("Settings Placeholder", style = MaterialTheme.typography.titleMedium)
+            Text("Settings", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .premiumCard()
+                    .padding(vertical = 8.dp)
+            ) {
+                SettingRow(label = "Notifications")
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.padding(horizontal = 16.dp))
+                SettingRow(label = "Appearance")
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.padding(horizontal = 16.dp))
+                SettingRow(label = "Sign in to save data")
+            }
         }
+    }
+}
+
+@Composable
+fun SettingRow(label: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -86,12 +118,12 @@ fun ProfileScreen() {
 fun StatBox(modifier: Modifier = Modifier, value: String, label: String) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .premiumCard(RoundedCornerShape(16.dp))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, style = MaterialTheme.typography.displayMedium)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

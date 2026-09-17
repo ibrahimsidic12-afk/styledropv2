@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.models.AppConstants
+import com.example.ui.theme.premiumCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +46,10 @@ fun AiGeneratorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("✨ AI Stylist") }
+                title = { Text("AI Stylist", style = MaterialTheme.typography.titleLarge) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { paddingValues ->
@@ -59,7 +63,7 @@ fun AiGeneratorScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Create your outfit",
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.displayMedium
             )
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -75,19 +79,20 @@ fun AiGeneratorScreen(
             if (generatedResult != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Text(
-                            text = "✨ Stylist Recommendation", 
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            text = "Stylist recommendation", 
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.secondary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = generatedResult!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -105,9 +110,7 @@ fun AiGeneratorScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surface)
+                    .premiumCard(RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -115,7 +118,11 @@ fun AiGeneratorScreen(
                 Text("Automatic", style = MaterialTheme.typography.bodyLarge)
                 Switch(
                     checked = autoWeather,
-                    onCheckedChange = { autoWeather = it }
+                    onCheckedChange = { autoWeather = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                        checkedTrackColor = MaterialTheme.colorScheme.secondary
+                    )
                 )
             }
 
@@ -126,9 +133,7 @@ fun AiGeneratorScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surface)
+                    .premiumCard(RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -164,10 +169,12 @@ fun AiGeneratorScreen(
                         count = count
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                contentPadding = PaddingValues(vertical = 16.dp),
-                enabled = !isGenerating
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 if (isGenerating) {
                     CircularProgressIndicator(
@@ -176,11 +183,11 @@ fun AiGeneratorScreen(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("GENERATING...")
+                    Text("Generating…", style = MaterialTheme.typography.labelLarge)
                 } else {
                     Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("GENERATE")
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Generate outfit", style = MaterialTheme.typography.labelLarge)
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))

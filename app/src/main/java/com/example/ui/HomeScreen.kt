@@ -22,6 +22,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.models.ItemCategory
+import com.example.ui.theme.premiumCard
+import java.time.LocalTime
+
+private fun greeting(): String = when (LocalTime.now().hour) {
+    in 5..11  -> "Good morning"
+    in 12..16 -> "Good afternoon"
+    in 17..21 -> "Good evening"
+    else       -> "Working late"
+}
 
 @Composable
 fun HomeScreen(
@@ -45,97 +54,98 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Good Morning, StyleDrop",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Text(
-            text = "Here's your style overview for today.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Weather Card Placeholder
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("⛅", style = MaterialTheme.typography.displayMedium)
-            Spacer(modifier = Modifier.width(14.dp))
-            Column {
-                Text(
-                    text = "Today's Weather • Unknown",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "22°C • Partly Cloudy",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Wardrobe Status",
-            style = MaterialTheme.typography.titleLarge
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            val topCount = allItems.count { it.category == ItemCategory.TOP }
-            val bottomCount = allItems.count { it.category == ItemCategory.BOTTOM }
-            val shoeCount = allItems.count { it.category == ItemCategory.SHOES }
-
-            StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.TOP), label = "Tops", count = topCount)
-            StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.BOTTOM), label = "Bottoms", count = bottomCount)
-            StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.SHOES), label = "Shoes", count = shoeCount)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Recommended Outfit",
-            style = MaterialTheme.typography.titleLarge
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(20.dp)
-        ) {
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Add a top, a bottom and a pair of shoes to get your first recommended outfit here.",
-                style = MaterialTheme.typography.bodyMedium
+                text = greeting(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = onNavigateToAI,
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "Your wardrobe, curated.",
+                style = MaterialTheme.typography.displayMedium
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Weather Card Placeholder
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .premiumCard()
+                    .padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("TRY GENERATING")
+                Text("⛅", style = MaterialTheme.typography.displayMedium)
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = "Today's Weather • Unknown",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "22°C • Partly Cloudy",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Wardrobe Status",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val topCount = allItems.count { it.category == ItemCategory.TOP }
+                val bottomCount = allItems.count { it.category == ItemCategory.BOTTOM }
+                val shoeCount = allItems.count { it.category == ItemCategory.SHOES }
+
+                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.TOP), label = "Tops", count = topCount)
+                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.BOTTOM), label = "Bottoms", count = bottomCount)
+                StatTile(modifier = Modifier.weight(1f), emoji = ItemCategory.emoji(ItemCategory.SHOES), label = "Shoes", count = shoeCount)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Recommended Outfit",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .premiumCard()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "Add a top, a bottom and a pair of shoes to get your first recommended outfit here.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onNavigateToAI,
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Generate an outfit", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-    }
     }
 }
 
@@ -143,9 +153,7 @@ fun HomeScreen(
 fun StatTile(modifier: Modifier = Modifier, emoji: String, label: String, count: Int) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .premiumCard(RoundedCornerShape(16.dp))
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StyleDrop — Wardrobe UI Preview</title>
+<style>
+  /* ══════════════ DESIGN TOKENS — mirrored from app/src/main/java/com/example/ui/theme/Color.kt ══════════════ */
+  :root {
+    --bg:            #FAF7F0;  /* BackgroundLight  */
+    --surface:       #FFFFFF;  /* SurfaceLight     */
+    --surface-alt:   #F1ECE1;  /* SurfaceAltLight  */
+    --ink:           #1B1A17;  /* InkLight         */
+    --ink-soft:      #4A463E;  /* InkSoftLight     */
+    --muted:         #837B6C;  /* MutedTextLight   */
+    --line:          #E7E0D2;  /* LineLight        */
+    --accent:        #6B6355;  /* AccentLight      */
+    --gold:          #B08A4F;  /* GoldLight        */
+    --error:         #B5533C;
+    --shadow-card:   0 8px 24px rgba(27,26,23,.07), 0 2px 6px rgba(27,26,23,.05);
+    --shadow-card-hover: 0 16px 40px rgba(27,26,23,.12), 0 4px 10px rgba(27,26,23,.07);
+    --radius-card:   20px;
+    --radius-thumb:  14px;
+    --ease-out:      cubic-bezier(.2,.8,.2,1);
+    --dur-fast:      120ms;
+    --dur-med:       220ms;
+    --font-display:  "Playfair Display", Georgia, serif;
+    --font-body:     Inter, -apple-system, "Segoe UI", sans-serif;
+  }
+  [data-theme="dark"] {
+    --bg:#16150F; --surface:#201E17; --surface-alt:#2A281F; --ink:#F3EEE2;
+    --ink-soft:#CFC8B8; --muted:#9A9384; --line:#35322A; --accent:#BFB39C; --gold:#CBA870;
+    --shadow-card: 0 8px 24px rgba(0,0,0,.35); --shadow-card-hover: 0 16px 40px rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); transition: background var(--dur-med) var(--ease-out); }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ══════════════ LAYOUT SHELL ══════════════ */
+  .shell { display: flex; min-height: 100vh; }
+  .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+  /* ══════════════ HEADER ══════════════ */
+  header {
+    display:flex; align-items:center; gap:12px;
+    padding: 20px 24px 8px;
+    position: sticky; top:0; z-index: 30;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+  }
+  header h1 { font: 600 28px/1.15 var(--font-display); letter-spacing: -.5px; flex:1; }
+  .theme-toggle {
+    border:1px solid var(--line); background:var(--surface); border-radius:999px;
+    padding:8px 14px; font-size:12px; color:var(--ink-soft); transition: all var(--dur-fast) var(--ease-out);
+  }
+  .theme-toggle:hover { border-color: var(--gold); color: var(--ink); }
+
+  .header-actions { display:flex; gap:8px; }
+  .chip-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    border-radius:999px; padding:9px 16px; font-size:13px; font-weight:600;
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+  }
+  .chip-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-card); border-color: var(--gold); }
+  .chip-btn:active { transform: translateY(0) scale(.97); }
+  .chip-btn.active { border-color: var(--gold); background: var(--surface-alt); }
+  .badge {
+    background: var(--gold); color:#fff; border-radius:999px; font-size:10px; font-weight:700;
+    min-width:17px; height:17px; display:inline-flex; align-items:center; justify-content:center; padding:0 4px;
+  }
+
+  /* sort dropdown */
+  .sort-wrap { position:relative; }
+  .menu {
+    position:absolute; right:0; top:calc(100% + 6px); min-width: 210px; z-index:40;
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    box-shadow: var(--shadow-card-hover); padding:6px; display:none;
+    animation: pop var(--dur-fast) var(--ease-out);
+  }
+  .menu.open { display:block; }
+  @keyframes pop { from { opacity:0; transform: translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+  .menu button {
+    display:flex; width:100%; align-items:center; justify-content:space-between; gap:12px;
+    background:none; border:0; padding:10px 12px; border-radius:10px; font-size:13px; color:var(--ink); text-align:left;
+  }
+  .menu button:hover { background: var(--surface-alt); }
+  .menu button .check { color: var(--gold); font-weight:700; visibility:hidden; }
+  .menu button.selected .check { visibility: visible; }
+
+  /* ══════════════ CATEGORY TABS (7) ══════════════ */
+  .tabs {
+    display:flex; gap:2px; padding: 4px 24px 0; overflow-x:auto; scrollbar-width:none;
+    border-bottom: 1px solid var(--line); position: sticky; top:64px; z-index:20; background: var(--bg);
+  }
+  .tab {
+    position:relative; background:none; border:0; white-space:nowrap;
+    padding: 12px 14px; font-size:14px; font-weight:600; color: var(--muted);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .tab:hover { color: var(--ink-soft); }
+  .tab .count { font-size:11px; opacity:.75; margin-left:4px; }
+  .tab::after {  /* animated underline indicator */
+    content:""; position:absolute; left:12px; right:12px; bottom:0; height:3px;
+    background: var(--gold); border-radius:3px 3px 0 0;
+    transform: scaleX(0); transform-origin:center; transition: transform var(--dur-med) var(--ease-out);
+  }
+  .tab.active { color: var(--ink); }
+  .tab.active::after { transform: scaleX(1); }
+
+  /* ══════════════ FILTER RAIL ══════════════ */
+  .rail {
+    width: 280px; flex-shrink:0; border-right:1px solid var(--line);
+    padding: 20px; position: sticky; top: 104px; height: calc(100vh - 104px); overflow-y:auto;
+  }
+  .rail.hidden-rail { display:none; }
+  .rail-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .rail-head h2 { font: 600 20px var(--font-display); }
+  .clear-btn { background:none; border:0; color:var(--gold); font-weight:600; font-size:12px; letter-spacing:.4px; text-transform:uppercase; padding:6px; border-radius:8px; }
+  .clear-btn:hover { background: var(--surface-alt); }
+  .section-title { font-size:12px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); margin: 20px 0 10px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .fchip {
+    display:inline-flex; align-items:center; gap:7px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft);
+    border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:500;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .fchip:hover { border-color: var(--gold); color: var(--ink); transform: translateY(-1px); }
+  .fchip.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  [data-theme="dark"] .fchip.selected { background: var(--gold); border-color: var(--gold); color:#16150F; }
+  .fchip .swatch { width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,.15); }
+
+  /* ══════════════ ACTIVE FILTER CHIPS ══════════════ */
+  .active-filters { display:flex; flex-wrap:wrap; gap:6px; padding: 10px 24px 0; }
+  .active-filters:empty { display:none; }
+  .afchip {
+    display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600;
+    background: var(--surface-alt); border:1px solid var(--line); color: var(--ink-soft);
+    border-radius:999px; padding:5px 10px; animation: pop var(--dur-fast) var(--ease-out);
+  }
+  .afchip button { background:none; border:0; color:var(--muted); font-size:13px; line-height:1; padding:0; }
+  .afchip button:hover { color: var(--error); }
+
+  /* ══════════════ GARMENT GRID ══════════════ */
+  .grid-wrap { flex:1; padding: 16px 24px 96px; }
+  .grid {
+    display:grid; gap:14px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+  @media (min-width: 600px)  { .grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+  @media (min-width: 1240px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .card {
+    background: var(--surface); border:1px solid color-mix(in srgb, var(--line) 40%, transparent);
+    border-radius: var(--radius-card); padding:8px; box-shadow: var(--shadow-card);
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+    animation: cardIn 300ms var(--ease-out) backwards;
+  }
+  .card:nth-child(-n+8) { animation-delay: calc(var(--i, 0) * 35ms); }
+  @keyframes cardIn { from { opacity:0; transform: translateY(10px) scale(.98); } to { opacity:1; transform:none; } }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card-hover); border-color: var(--line); }
+  .card:hover .thumb img { transform: scale(1.05); }
+  .card:active { transform: translateY(-1px) scale(.985); }
+  .card.dragging { opacity:.45; transform: scale(.97) rotate(1.5deg); border-style: dashed; }
+  .card.selected { border:2px solid var(--gold); }
+  .card.dimmed { opacity:.35; }
+
+  .thumb {
+    position:relative; aspect-ratio:1; border-radius: var(--radius-thumb); overflow:hidden;
+    background: var(--surface-alt);
+  }
+  .thumb img { width:100%; height:100%; object-fit:cover; transition: transform 300ms var(--ease-out); }
+  .thumb .ph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:56px; }
+  .fav {
+    position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%;
+    background: rgba(0,0,0,.28); backdrop-filter: blur(4px); border:0; color:#fff; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transform: scale(.8); transition: all var(--dur-fast) var(--ease-out);
+  }
+  .card:hover .fav, .fav.on { opacity:1; transform: scale(1); }
+  .fav:hover { transform: scale(1.15); background: rgba(0,0,0,.45); }
+  .fav.on { color: var(--error); }
+  .new-badge {
+    position:absolute; top:8px; left:8px; background: var(--gold); color:#fff;
+    font-size:9.5px; font-weight:700; letter-spacing:.8px; border-radius:6px; padding:3px 7px;
+  }
+
+  .card h3 { font-size:14.5px; font-weight:600; margin: 9px 2px 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .meta { font-size:11px; color: var(--muted); margin: 0 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .foot { display:flex; align-items:center; gap:4px; margin: 8px 2px 2px; }
+  .dot { width:12px; height:12px; border-radius:50%; border:1px solid var(--line); }
+  .dot + .dot { margin-left:2px; }
+  .foot .glyph { font-size:11px; }
+  .foot .stat { margin-left:auto; font-size:11px; font-weight:600; color: var(--muted); }
+
+  /* ══════════════ EMPTY STATES ══════════════ */
+  .empty {
+    display:none; flex-direction:column; align-items:center; text-align:center;
+    padding: 64px 32px; max-width: 460px; margin: 0 auto;
+    animation: pop 260ms var(--ease-out);
+  }
+  .empty.show { display:flex; }
+  .empty .glyph { font-size:56px; margin-bottom:14px; }
+  .empty h2 { font: 600 22px var(--font-display); margin-bottom:8px; }
+  .empty p { font-size:14px; line-height:1.55; color: var(--muted); margin-bottom:20px; }
+  .btn-primary {
+    background: var(--ink); color: var(--bg); border:0; border-radius:14px;
+    padding: 13px 26px; font-size:14px; font-weight:600;
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+  .btn-primary:active { transform: translateY(0) scale(.98); }
+  .btn-secondary { background:none; border:0; color:var(--gold); font-weight:600; font-size:13px; margin-top:8px; padding:8px; }
+  .btn-secondary:hover { text-decoration: underline; }
+
+  /* ══════════════ FAB ══════════════ */
+  .fab {
+    position:fixed; right:24px; bottom:24px; z-index:50;
+    display:inline-flex; align-items:center; gap:8px;
+    background: var(--ink); color: var(--bg); border:0; border-radius:16px;
+    padding: 15px 22px; font-size:14px; font-weight:600; box-shadow: var(--shadow-card-hover);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .fab:hover { transform: translateY(-2px) scale(1.02); }
+  .fab:active { transform: scale(.97); }
+  .fab .plus { font-size:18px; line-height:1; transition: transform var(--dur-med) var(--ease-out); }
+  .fab:hover .plus { transform: rotate(90deg); }
+
+  /* demo controls */
+  .demo-bar { display:flex; gap:8px; padding: 8px 24px 4px; flex-wrap:wrap; }
+  .demo-bar button {
+    font-size:11px; border:1px dashed var(--line); background:transparent; color:var(--muted);
+    border-radius:8px; padding:6px 10px;
+  }
+  .demo-bar button:hover { color: var(--ink); border-color: var(--gold); }
+
+  @media (max-width: 840px) {
+    .rail { position:fixed; left:0; top:0; bottom:0; height:100vh; background:var(--bg); z-index:60;
+            transform: translateX(-100%); transition: transform var(--dur-med) var(--ease-out); box-shadow: var(--shadow-card-hover); }
+    .rail.open { transform: none; }
+  }
+</style>
+</head>
+<body data-theme="light">
+<div class="shell">
+
+  <!-- ═══════════ FILTER RAIL ═══════════ -->
+  <aside class="rail hidden-rail" id="rail">
+    <div class="rail-head">
+      <h2>Filters</h2>
+      <button class="clear-btn" onclick="clearFilters()">Clear all</button>
+    </div>
+    <div id="railSections"></div>
+  </aside>
+
+  <div class="content">
+    <header>
+      <h1>Wardrobe</h1>
+      <div class="header-actions">
+        <div class="sort-wrap">
+          <button class="chip-btn" id="sortBtn">↓ <span id="sortLabel">Recently added</span></button>
+          <div class="menu" id="sortMenu">
+            <button data-sort="RECENTLY_ADDED" class="selected">Recently added <span class="check">✓</span></button>
+            <button data-sort="MOST_WORN">Most worn <span class="check">✓</span></button>
+            <button data-sort="BY_COLOR">By color <span class="check">✓</span></button>
+            <button data-sort="BY_SEASON">By season <span class="check">✓</span></button>
+          </div>
+        </div>
+        <button class="chip-btn" id="filterBtn">⚙ Filters <span class="badge" id="filterBadge" hidden>0</span></button>
+        <button class="theme-toggle" onclick="toggleTheme()">◐</button>
+      </div>
+    </header>
+
+    <!-- ═══════════ 7 CATEGORY TABS ═══════════ -->
+    <nav class="tabs" id="tabs"></nav>
+
+    <div class="demo-bar">
+      <button onclick="setState('populated')">▸ Demo: populated closet</button>
+      <button onclick="setState('first')">▸ Demo: empty wardrobe state</button>
+      <button onclick="setState('emptyTab')">▸ Demo: empty tab state</button>
+      <button onclick="setState('noMatch')">▸ Demo: no matches state</button>
+      <button onclick="demoFilter()">▸ Demo: apply filters</button>
+    </div>
+
+    <div class="active-filters" id="activeFilters"></div>
+
+    <!-- ═══════════ GARMENT GRID ═══════════ -->
+    <main class="grid-wrap">
+      <div class="grid" id="grid"></div>
+
+      <!-- Empty state 1 — just getting started -->
+      <section class="empty" id="emptyFirst">
+        <div class="glyph">🧥</div>
+        <h2>Your closet awaits</h2>
+        <p>Add your first piece and let your AI stylist do the rest. Snap a photo — StyleDrop identifies the type, color, fabric and season for you.</p>
+        <button class="btn-primary">Add your first item</button>
+        <button class="btn-secondary">Watch a 30-second intro</button>
+      </section>
+
+      <!-- Empty state 2 — building the wardrobe -->
+      <section class="empty" id="emptyTab">
+        <div class="glyph" id="emptyTabGlyph">👗</div>
+        <h2 id="emptyTabTitle">No Dresses yet</h2>
+        <p id="emptyTabBody">You have pieces in other categories. Every Dress you add unlocks new outfit combinations in the AI generator.</p>
+        <button class="btn-primary">Add Dresses</button>
+      </section>
+
+      <!-- Empty state 2b — filters hide everything -->
+      <section class="empty" id="emptyNoMatch">
+        <div class="glyph">🔍</div>
+        <h2>No matches</h2>
+        <p>Nothing in your closet matches these filters. Try removing one — or clear everything and start again.</p>
+        <button class="btn-primary" onclick="clearFilters()">Clear all filters</button>
+      </section>
+    </main>
+  </div>
+</div>
+
+<button class="fab" id="fab"><span class="plus">+</span> Add Item</button>
+
+<script>
+/* ══════════════ DATA — fields mirror the Room entity WardrobeItem ══════════════ */
+const TABS = ["Tops","Bottoms","Outerwear","Footwear","Accessories","Dresses","Activewear"];
+const CATEGORY_OF_TAB = { Footwear:"Shoes" }; // stored value kept for data compatibility
+const SWATCHES = { Black:"#1B1A17", White:"#FFFFFF", Gray:"#9A9384", Beige:"#E8DCC8", Brown:"#8B5E3C", Olive:"#6B6B3A", Navy:"#22304A" };
+const SEASON_GLYPH = { "All Season":"✦", "Summer":"☀️", "Winter":"❄️", "Spring/Fall":"🍂" };
+const SEASON_ORDER = ["All Season","Spring/Fall","Summer","Winter"];
+const TAB_EMOJI = { Tops:"👕", Bottoms:"👖", Outerwear:"🧥", Footwear:"👟", Accessories:"🧢", Dresses:"👗", Activewear:"🏃" };
+
+const items = [
+  { id:1, tab:"Tops", type:"Oxford Shirt", brand:"Uniqlo", color:"White", secondary:[], fit:"Regular", fabric:"Cotton", season:"All Season", timesWorn:14, fav:true, isNew:false, emoji:"👔" },
+  { id:2, tab:"Tops", type:"Oversized Tee", brand:"", color:"Black", secondary:["Gray"], fit:"Oversized", fabric:"Cotton", season:"Summer", timesWorn:31, fav:false, isNew:true, emoji:"👕" },
+  { id:3, tab:"Tops", type:"Merino Crewneck", brand:"Cos", color:"Beige", secondary:[], fit:"Slim", fabric:"Wool", season:"Winter", timesWorn:6, fav:true, isNew:false, emoji:"🧶" },
+  { id:4, tab:"Bottoms", type:"Wide-Leg Trousers", brand:"Zara", color:"Navy", secondary:[], fit:"Relaxed", fabric:"Wool", season:"All Season", timesWorn:9, fav:false, isNew:true, emoji:"👖" },
+  { id:5, tab:"Bottoms", type:"Straight Jeans", brand:"Levi's", color:"Navy", secondary:["White"], fit:"Regular", fabric:"Denim", season:"All Season", timesWorn:42, fav:true, isNew:false, emoji:"👖" },
+  { id:6, tab:"Outerwear", type:"Trench Coat", brand:"Burberry", color:"Beige", secondary:["Brown"], fit:"Regular", fabric:"Cotton", season:"Spring/Fall", timesWorn:4, fav:false, isNew:false, emoji:"🧥" },
+  { id:7, tab:"Footwear", type:"White Sneakers", brand:"Common Projects", color:"White", secondary:[], fit:"Regular", fabric:"Leather", season:"All Season", timesWorn:57, fav:true, isNew:false, emoji:"👟" },
+  { id:8, tab:"Footwear", type:"Chelsea Boots", brand:"Doc Martens", color:"Black", secondary:[], fit:"Regular", fabric:"Leather", season:"Winter", timesWorn:11, fav:false, isNew:false, emoji:"🥾" },
+  { id:9, tab:"Accessories", type:"Leather Belt", brand:"", color:"Brown", secondary:[], fit:"Regular", fabric:"Leather", season:"All Season", timesWorn:22, fav:false, isNew:false, emoji:"🧢" },
+  { id:10, tab:"Dresses", type:"Slip Dress", brand:"& Other Stories", color:"Black", secondary:[], fit:"Slim", fabric:"Silk", season:"All Season", timesWorn:3, fav:true, isNew:true, emoji:"👗" },
+  { id:11, tab:"Activewear", type:"Training Shorts", brand:"Nike", color:"Gray", secondary:["Black"], fit:"Relaxed", fabric:"Technical", season:"Summer", timesWorn:18, fav:false, isNew:false, emoji:"🏃" },
+  { id:12, tab:"Activewear", type:"Running Tee", brand:"Adidas", color:"White", secondary:[], fit:"Slim", fabric:"Technical", season:"Summer", timesWorn:8, fav:false, isNew:false, emoji:"🎽" },
+];
+// demo duplicates so the grid feels full
+for (let i = 13; i <= 22; i++) items.push({ ...items[i % 12], id: i, timesWorn: (i * 7) % 40 });
+
+let state = { tab:"Tops", sort:"RECENTLY_ADDED", mode:"populated", filters:{ colors:new Set(), seasons:new Set(), formalities:new Set(), fabrics:new Set() } };
+const FORMALITIES = ["Casual","Smart Casual","Formal","Athleisure"];
+const FABRICS = ["Cotton","Linen","Wool","Denim","Leather","Silk","Cashmere","Technical"];
+// demo-only assignments for the two [NEW] fields
+items.forEach((it, i) => { it.formality = FORMALITIES[i % 4]; });
+const activeTabKey = () => CATEGORY_OF_TAB[state.tab] || state.tab;
+
+/* ══════════════ RENDER ══════════════ */
+function renderTabs() {
+  document.getElementById("tabs").innerHTML = TABS.map(t => {
+    const n = items.filter(i => (CATEGORY_OF_TAB[i.tab] || i.tab) === t).length;
+    return `<button class="tab ${t===state.tab?'active':''}" onclick="setTab('${t}')">${t}<span class="count">${n}</span></button>`;
+  }).join("");
+}
+
+function filteredItems() {
+  let list = items.filter(i => i.tab === state.tab);
+  const f = state.filters;
+  if (f.colors.size) list = list.filter(i => f.colors.has(i.color) || i.secondary.some(s => f.colors.has(s)));
+  if (f.seasons.size) list = list.filter(i => f.seasons.has(i.season));
+  if (f.formalities.size) list = list.filter(i => f.formalities.has(i.formality));
+  if (f.fabrics.size) list = list.filter(i => f.fabrics.has(i.fabric));
+  const sorters = {
+    RECENTLY_ADDED: (a,b) => b.id - a.id,
+    MOST_WORN: (a,b) => b.timesWorn - a.timesWorn,
+    BY_COLOR: (a,b) => (a.color+b.type).localeCompare(b.color+b.type),
+    BY_SEASON: (a,b) => SEASON_ORDER.indexOf(a.season) - SEASON_ORDER.indexOf(b.season) || b.id - a.id,
+  };
+  return [...list].sort(sorters[state.sort]);
+}
+
+function renderGrid() {
+  const grid = document.getElementById("grid");
+  ["emptyFirst","emptyTab","emptyNoMatch"].forEach(id => document.getElementById(id).classList.remove("show"));
+
+  const showEmpty = state.mode !== "populated";
+  if (showEmpty) {
+    grid.innerHTML = "";
+    document.getElementById(state.mode === "first" ? "emptyFirst" : state.mode === "emptyTab" ? "emptyTab" : "emptyNoMatch").classList.add("show");
+    if (state.mode === "emptyTab") {
+      document.getElementById("emptyTabGlyph").textContent = TAB_EMOJI[state.tab];
+      document.getElementById("emptyTabTitle").textContent = `No ${state.tab} yet`;
+      document.getElementById("emptyTabBody").textContent = `You have pieces in other categories. Every ${state.tab.replace(/s$/,"")} you add unlocks new outfit combinations in the AI generator.`;
+    }
+    return;
+  }
+
+  const list = filteredItems();
+  grid.innerHTML = list.map((it, i) => `
+    <article class="card" style="--i:${i % 8}" draggable="true" ondragstart="onDragStart(event)" ondragend="onDragEnd(event)">
+      <div class="thumb">
+        <div class="ph">${it.emoji}</div>
+        ${it.isNew ? '<span class="new-badge">NEW</span>' : ''}
+        <button class="fav ${it.fav?'on':''}" onclick="event.stopPropagation();toggleFav(${it.id})">♥</button>
+      </div>
+      <h3>${it.type}</h3>
+      <p class="meta">${[it.brand, it.color, it.fit, it.fabric].filter(Boolean).join(" · ")}</p>
+      <div class="foot">
+        <span class="dot" style="background:${SWATCHES[it.color] || '#6B6355'}"></span>
+        ${it.secondary.map(s => `<span class="dot" style="background:${SWATCHES[s] || '#6B6355'}"></span>`).join("")}
+        <span class="glyph">${SEASON_GLYPH[it.season]}</span>
+        <span class="stat">${state.sort === "MOST_WORN" ? "· " + it.timesWorn + "×" : ""}</span>
+      </div>
+    </article>`).join("");
+}
+
+function renderRail() {
+  const sections = [
+    { title:"Color", values:Object.keys(SWATCHES), set:state.filters.colors, swatch:true, key:"colors" },
+    { title:"Season", values:SEASON_ORDER, set:state.filters.seasons, key:"seasons" },
+    { title:"Formality", values:FORMALITIES, set:state.filters.formalities, key:"formalities" },
+    { title:"Fabric", values:FABRICS, set:state.filters.fabrics, key:"fabrics" },
+  ];
+  document.getElementById("railSections").innerHTML = sections.map(s => `
+    <div>
+      <div class="section-title">${s.title}</div>
+      <div class="chips">
+        ${s.values.map(v => `<button class="fchip ${s.set.has(v)?'selected':''}" onclick="toggleFilter('${s.key}','${v}')">
+          ${s.swatch ? `<span class="swatch" style="background:${SWATCHES[v]}"></span>` : ""}${v}</button>`).join("")}
+      </div>
+    </div>`).join("");
+  renderActiveFilterChips();
+}
+
+function renderActiveFilterChips() {
+  const f = state.filters;
+  const all = [...f.colors, ...f.seasons, ...f.formalities, ...f.fabrics];
+  const badge = document.getElementById("filterBadge");
+  badge.hidden = all.length === 0; badge.textContent = all.length;
+  document.getElementById("filterBtn").classList.toggle("active", all.length > 0);
+  document.getElementById("activeFilters").innerHTML = all.length
+    ? `<span class="afchip"><button onclick="clearFilters()">✕ Clear all</button></span>` +
+      all.map(v => `<span class="afchip">${v}<button onclick="removeFilter('${v}')">✕</button></span>`).join("")
+    : "";
+}
+
+/* ══════════════ INTERACTIONS ══════════════ */
+function setTab(t) { state.tab = t; renderTabs(); renderGrid(); }
+function toggleFav(id) { const it = items.find(i => i.id === id); it.fav = !it.fav; renderGrid(); }
+function toggleTheme() {
+  const b = document.body;
+  b.dataset.theme = b.dataset.theme === "dark" ? "light" : "dark";
+}
+function toggleFilter(key, v) { state.filters[key].has(v) ? state.filters[key].delete(v) : state.filters[key].add(v); renderRail(); renderGrid(); }
+function removeFilter(v) { for (const k of Object.values(state.filters)) k.delete(v); renderRail(); renderGrid(); }
+function clearFilters() { for (const k of Object.values(state.filters)) k.clear(); renderRail(); renderGrid(); }
+function demoFilter() { clearFilters(); state.filters.colors.add("Black"); state.filters.fabrics.add("Leather"); renderRail(); renderGrid(); }
+function setState(m) { state.mode = m; renderGrid(); }
+
+/* sort menu */
+const sortMenu = document.getElementById("sortMenu");
+document.getElementById("sortBtn").onclick = e => { e.stopPropagation(); sortMenu.classList.toggle("open"); };
+document.addEventListener("click", () => sortMenu.classList.remove("open"));
+sortMenu.querySelectorAll("button").forEach(b => b.onclick = () => {
+  state.sort = b.dataset.sort;
+  document.getElementById("sortLabel").textContent = b.textContent.replace("✓","").trim();
+  sortMenu.querySelectorAll("button").forEach(x => x.classList.toggle("selected", x === b));
+  renderGrid();
+});
+
+/* filter sheet on narrow screens */
+const rail = document.getElementById("rail");
+document.getElementById("filterBtn").addEventListener("click", e => {
+  e.stopPropagation();
+  if (window.innerWidth <= 840) rail.classList.toggle("open");
+  else rail.classList.toggle("hidden-rail");
+});
+document.addEventListener("click", e => { if (!rail.contains(e.target)) rail.classList.remove("open"); });
+
+/* drag-to-reorder (drag-select on mobile follows the same gesture contract) */
+function onDragStart(e) { e.target.closest(".card").classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; }
+function onDragEnd(e)  { e.target.closest(".card").classList.remove("dragging"); }
+
+/* init */
+renderTabs(); renderRail(); renderGrid();
+</script>
+</body>
+</html>

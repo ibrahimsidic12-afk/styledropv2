@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StyleDrop — Outfit Builder (Mix &amp; Match)</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --surface:#FFFFFF; --surface-alt:#F1ECE1; --ink:#1B1A17;
+    --ink-soft:#4A463E; --muted:#837B6C; --line:#E7E0D2; --gold:#B08A4F; --gold-deep:#96742F;
+    --warn:#C0653A; --ok:#5E7D4F; --bad:#B0442E;
+    --radius:14px; --shadow:0 6px 18px rgba(27,26,23,.08), 0 2px 6px rgba(27,26,23,.05);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+    background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+  /* ---------- Top bar ---------- */
+  header{
+    display:flex; align-items:center; gap:14px; padding:14px 22px;
+    border-bottom:1px solid var(--line); background:var(--surface); position:sticky; top:0; z-index:50;
+  }
+  header .logo{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.2px;}
+  header .logo .mark{
+    width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,var(--gold),#D9BC85);
+    display:grid; place-items:center; color:#fff; font-size:15px;
+  }
+  header .sub{color:var(--muted); font-size:12.5px;}
+  header .spacer{flex:1;}
+  .btn{
+    display:inline-flex; align-items:center; gap:7px; padding:9px 15px; border-radius:999px;
+    border:1px solid var(--line); background:var(--surface); font-size:13.5px; font-weight:600;
+    transition:transform .12s ease, box-shadow .12s ease, background .12s;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow);}
+  .btn.primary{background:var(--ink); color:#F3EEE2; border-color:var(--ink);}
+  .btn.gold{background:linear-gradient(135deg,var(--gold),#CBA870); color:#fff; border-color:transparent;}
+  .btn.ghost:disabled{opacity:.4; cursor:default; transform:none;}
+  /* ---------- Layout ---------- */
+  main{display:grid; grid-template-columns:300px 1fr 296px; gap:18px; padding:18px 22px; max-width:1440px; margin:0 auto;}
+  @media (max-width:1120px){ main{grid-template-columns:260px 1fr;} aside{grid-column:1/-1;} }
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);}
+  .panel h2{
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    padding:14px 16px 8px; display:flex; align-items:center; gap:8px;
+  }
+  /* ---------- Wardrobe rail ---------- */
+  .rail .filters{display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 10px;}
+  .chip{
+    font-size:12px; font-weight:600; padding:6px 11px; border-radius:999px;
+    background:var(--surface-alt); color:var(--ink-soft); border:1px solid transparent; transition:.12s;
+  }
+  .chip:hover{border-color:var(--line);}
+  .chip.active{background:var(--ink); color:#F3EEE2;}
+  .rail .items{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:4px 14px 16px; max-height:calc(100vh - 190px); overflow:auto;}
+  .card{
+    background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:10px;
+    cursor:grab; transition:.15s; user-select:none; position:relative;
+  }
+  .card:hover{transform:translateY(-2px); box-shadow:var(--shadow); border-color:#D6CDBA;}
+  .card.selected{border-color:var(--gold); box-shadow:0 0 0 3px rgba(176,138,79,.18);}
+  .card.placed{opacity:.35; pointer-events:none;}
+  .card .swatch{
+    height:64px; border-radius:8px; display:grid; place-items:center; font-size:30px; margin-bottom:8px;
+    border:1px solid rgba(27,26,23,.08); background:var(--surface-alt);
+  }
+  .card .name{font-size:12.5px; font-weight:700; line-height:1.25;}
+  .card .meta{font-size:10.5px; color:var(--muted); margin-top:3px; display:flex; gap:5px; align-items:center; flex-wrap:wrap;}
+  .card .pattern-dot{width:7px; height:7px; border-radius:50%; background:var(--gold); display:inline-block;}
+  .rail-empty{padding:24px 14px; color:var(--muted); font-size:13px; text-align:center;}
+  /* ---------- Canvas ---------- */
+  .canvas-wrap{display:flex; flex-direction:column; gap:14px;}
+  .canvas-panel{padding:14px;}
+  .canvas{
+    position:relative; width:100%; aspect-ratio:16/11.2; border-radius:12px;
+    background:
+      radial-gradient(120% 90% at 50% 0%, #FFFFFF 0%, #F7F2E7 60%, #F1ECE1 100%);
+    border:1px solid var(--line); overflow:hidden; touch-action:none;
+  }
+  .canvas.drag-over{outline:2px dashed var(--gold); outline-offset:-6px;}
+  .guide{
+    position:absolute; inset:0; display:grid; place-items:center; color:#C9BFA9;
+    font-size:14px; letter-spacing:.05em; text-align:center; pointer-events:none; line-height:1.7;
+  }
+  .slot{
+    position:absolute; border:1.5px dashed #D8CFBB; border-radius:14px; display:grid; place-items:center;
+    color:#A79C84; font-size:11px; font-weight:600; text-align:center; transition:.15s; background:rgba(255,255,255,.4);
+  }
+  .slot:hover{border-color:var(--gold); color:var(--gold-deep); background:rgba(255,255,255,.75);}
+  .slot.drag-over{border-color:var(--gold); border-style:solid; background:rgba(176,138,79,.10); transform:scale(1.04);}
+  .slot .glyph{font-size:22px; display:block; margin-bottom:2px; opacity:.8;}
+  .placed{
+    position:absolute; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:6px;
+    font-weight:700; font-size:12px; color:var(--ink); border:1.5px solid rgba(27,26,23,.25);
+    cursor:grab; box-shadow:0 4px 10px rgba(27,26,23,.12); user-select:none; transition:box-shadow .15s;
+    animation:drop-in .28s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes drop-in{0%{transform:scale(1.18); opacity:0;} 100%{transform:scale(1); opacity:1;}}
+  .placed:hover{box-shadow:0 8px 18px rgba(27,26,23,.2);}
+  .placed .remove{
+    position:absolute; top:-8px; right:-8px; width:20px; height:20px; border-radius:50%;
+    background:var(--ink); color:#fff; font-size:11px; display:none; place-items:center; line-height:1;
+  }
+  .placed:hover .remove{display:grid;}
+  .placed .ztag{
+    position:absolute; top:-8px; left:-8px; min-width:20px; height:20px; padding:0 5px; border-radius:10px;
+    background:var(--gold); color:#fff; font-size:10px; font-weight:700; display:grid; place-items:center;
+  }
+  /* ---------- Status strip ---------- */
+  .status{display:flex; flex-direction:column; gap:12px;}
+  .clash-strip{padding:12px 16px; display:flex; flex-direction:column; gap:8px;}
+  .clash-row{display:flex; align-items:flex-start; gap:9px; font-size:13px; line-height:1.45;}
+  .clash-row .ic{flex:none; width:20px; text-align:center;}
+  .clash-row.warn .ic{color:var(--warn);} .clash-row.good .ic{color:var(--ok);}
+  .clash-row b{font-weight:700;}
+  .clash-row .mute{margin-left:auto; font-size:11px; color:var(--muted); text-decoration:underline; cursor:pointer;}
+  .score-strip{display:flex; align-items:center; gap:16px; padding:14px 16px;}
+  .score-num{font-size:34px; font-weight:800; letter-spacing:-.02em; min-width:64px;}
+  .score-grade{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:5px 10px; border-radius:999px;}
+  .grade-fire{background:#F6E3D0; color:var(--warn);} .grade-solid{background:#E4EBDC; color:var(--ok);}
+  .grade-decent{background:var(--surface-alt); color:var(--muted);} .grade-rework{background:#F3DBD4; color:var(--bad);}
+  .bars{flex:1; display:grid; grid-template-columns:1fr 1fr; gap:7px 18px;}
+  .bar-row{display:grid; grid-template-columns:92px 1fr 44px; align-items:center; gap:9px; font-size:12px;}
+  .bar-row .lbl{color:var(--muted); font-weight:600;}
+  .bar{height:7px; background:var(--surface-alt); border-radius:99px; overflow:hidden;}
+  .bar i{display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--gold),#D9BC85); transition:width .4s ease;}
+  .bar-row .val{text-align:right; color:var(--ink-soft); font-variant-numeric:tabular-nums;}
+  /* ---------- Actions ---------- */
+  .actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .actions .btn{flex:1; justify-content:center;}
+  /* ---------- Inspector (right) ---------- */
+  aside{display:flex; flex-direction:column; gap:14px;}
+  .layer-list{list-style:none; padding:2px 12px 14px; display:flex; flex-direction:column; gap:6px;}
+  .layer-item{
+    display:flex; align-items:center; gap:9px; background:var(--surface); border:1px solid var(--line);
+    border-radius:10px; padding:8px 10px; font-size:13px; font-weight:600;
+  }
+  .layer-item .dot{width:14px; height:14px; border-radius:5px; border:1px solid rgba(0,0,0,.15); flex:none;}
+  .layer-item .cat{color:var(--muted); font-weight:600; font-size:11px; margin-left:auto;}
+  .layer-item .mv{display:flex; gap:3px;}
+  .layer-item .mv button{
+    width:22px; height:22px; border-radius:6px; background:var(--surface-alt); font-size:11px; display:grid; place-items:center;
+  }
+  .layer-item .mv button:hover{background:var(--gold); color:#fff;}
+  .layer-item .mv button:disabled{opacity:.3; cursor:default;}
+  .inspector-empty{padding:8px 16px 16px; color:var(--muted); font-size:12.5px; line-height:1.6;}
+  /* ---------- Saved looks ---------- */
+  .saved-strip{display:flex; gap:10px; padding:4px 14px 14px; overflow-x:auto;}
+  .saved-look{
+    flex:none; width:128px; border:1.5px solid var(--line); border-radius:12px; padding:9px; cursor:pointer;
+    background:var(--surface); transition:.15s; position:relative;
+  }
+  .saved-look:hover{border-color:var(--gold); box-shadow:var(--shadow);}
+  .saved-look .thumb{height:52px; border-radius:8px; display:flex; gap:3px; align-items:center; justify-content:center; font-size:19px; background:var(--surface-alt);}
+  .saved-look .nm{font-size:11.5px; font-weight:700; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .saved-look .sc{font-size:10.5px; color:var(--gold-deep); font-weight:700;}
+  .saved-look .del{position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:50%; background:var(--ink); color:#fff; font-size:10px; display:none; place-items:center;}
+  .saved-look:hover .del{display:grid;}
+  /* ---------- Toast / modal ---------- */
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translate(-50%,80px); background:var(--ink); color:#F3EEE2;
+    padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    opacity:0; transition:.3s; z-index:200; max-width:88vw; text-align:center;
+  }
+  .toast.show{transform:translate(-50%,0); opacity:1;}
+  dialog{
+    border:none; border-radius:16px; padding:0; box-shadow:0 24px 60px rgba(0,0,0,.25);
+    background:var(--surface); width:min(420px,92vw);
+  }
+  dialog::backdrop{background:rgba(27,26,23,.35); backdrop-filter:blur(2px);}
+  .dlg-body{padding:22px;}
+  .dlg-body h3{font-size:17px; margin-bottom:6px;}
+  .dlg-body p{font-size:13px; color:var(--muted); line-height:1.55; margin-bottom:14px;}
+  .dlg-body input{
+    width:100%; padding:11px 13px; border:1.5px solid var(--line); border-radius:10px; font:inherit; font-size:14px;
+    background:var(--bg);
+  }
+  .dlg-body input:focus{outline:none; border-color:var(--gold);}
+  .dlg-actions{display:flex; gap:9px; justify-content:flex-end; margin-top:16px;}
+  .share-out{
+    margin-top:10px; font-size:11px; background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:9px 10px; word-break:break-all; color:var(--ink-soft); user-select:all;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="mark">✦</span> StyleDrop <span class="sub">Outfit Builder · Mix &amp; Match</span></div>
+  <div class="spacer"></div>
+  <button class="btn" id="btnRandom" title="Stylist shuffle">🎲 Random Stylist</button>
+  <button class="btn" id="btnClear">🗑 Clear</button>
+</header>
+
+<main>
+  <!-- ══════════ WARDROBE RAIL ══════════ -->
+  <section class="panel rail" aria-label="Wardrobe">
+    <h2>👗 Wardrobe</h2>
+    <div class="filters" id="filters"></div>
+    <div class="items" id="railItems"></div>
+  </section>
+
+  <!-- ══════════ CANVAS ══════════ -->
+  <section class="canvas-wrap">
+    <div class="panel canvas-panel">
+      <div class="canvas" id="canvas">
+        <div class="guide" id="guide">Drag wardrobe items onto the silhouette<br>or tap a card, then tap a slot</div>
+        <!-- slots injected by JS -->
+      </div>
+    </div>
+
+    <div class="status">
+      <div class="panel clash-strip" id="clashStrip"></div>
+      <div class="panel score-strip">
+        <div>
+          <div class="score-num" id="scoreNum">0</div>
+          <span class="score-grade grade-rework" id="scoreGrade">Rework</span>
+        </div>
+        <div class="bars" id="scoreBars"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btnSave">💾 Save Look</button>
+        <button class="btn gold" id="btnShare">🔗 Share</button>
+        <button class="btn" id="btnCopyLink" disabled>📋 Copy Look Link</button>
+      </div>
+    </div>
+
+    <div class="panel" aria-label="Saved looks">
+      <h2>❤️ Saved Looks <span id="savedCount" style="text-transform:none;letter-spacing:0"></span></h2>
+      <div class="saved-strip" id="savedStrip"><div class="inspector-empty">Nothing saved yet — build a look and hit Save.</div></div>
+    </div>
+  </section>
+
+  <!-- ══════════ INSPECTOR ══════════ -->
+  <aside>
+    <div class="panel">
+      <h2>☰ Layer Stack <span style="text-transform:none;letter-spacing:0;color:#A79C84">top = frontmost</span></h2>
+      <ul class="layer-list" id="layerList"></ul>
+      <div class="inspector-empty" id="layerEmpty">Place items on the canvas to manage their layer order (base → mid → outer → accessories).</div>
+    </div>
+    <div class="panel">
+      <h2>🎨 Color Check</h2>
+      <div class="clash-strip" id="colorCheck" style="padding-top:4px"></div>
+    </div>
+    <div class="panel">
+      <h2>ℹ️ How scoring works</h2>
+      <div class="inspector-empty">
+        Harmony 40 · Completeness 30 · Pattern 15 · Cohesion 15 — hue-distance clash rule (&lt;25° mono ✓, 25–65° clash ⚠, ≥150° bold contrast ⚠). Full spec in <b>OUTFIT_BUILDER.md</b>.
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<dialog id="saveDlg">
+  <div class="dlg-body">
+    <h3>💾 Save this look</h3>
+    <p>Saves to this browser (localStorage). In the app this writes an <b>Outfit</b> + <b>OutfitSlot</b> rows to Room.</p>
+    <input id="saveName" placeholder="Look name — e.g. Monday Coffee Run" maxlength="48">
+    <div class="dlg-actions">
+      <button class="btn" id="saveCancel">Cancel</button>
+      <button class="btn primary" id="saveConfirm">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="shareDlg">
+  <div class="dlg-body">
+    <h3>🔗 Share look</h3>
+    <p>The whole outfit state is encoded in the URL — anyone who opens it sees your exact canvas (app equivalent: PNG render + <code>styledrop://look</code> deep link).</p>
+    <div class="share-out" id="shareOut"></div>
+    <div class="dlg-actions"><button class="btn primary" id="shareClose">Done</button></div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════════
+   StyleDrop Outfit Builder — prototype
+   Mirrors models/WardrobeItem.kt: {category, type, color, secondaryColor,
+   style, fit, pattern, season, brand}
+   ═══════════════════════════════════════════════════════════════ */
+
+const WARDROBE = [
+  {id:"w1",  type:"Washed Denim Jacket", category:"Outerwear",  color:"#7A99B8", pattern:"Solid",    style:["Casual","Streetwear"], fit:"Relaxed", brand:"Lee"},
+  {id:"w2",  type:"Camel Overcoat",      category:"Outerwear",  color:"#C19A6B", pattern:"Solid",    style:["Minimal","Formal"],    fit:"Long",    brand:"Uniqlo"},
+  {id:"w3",  type:"Ivory Oversized Tee", category:"Tops",       color:"#F5F1E6", pattern:"Solid",    style:["Minimal","Casual"],    fit:"Oversized", brand:"Cos"},
+  {id:"w4",  type:"Striped Breton Tee",  category:"Tops",       color:"#1B3A5C", secondaryColor:"#F5F1E6", pattern:"Striped", style:["Classic","Casual"], fit:"Regular", brand:"Saint James"},
+  {id:"w5",  type:"Rust Knit Sweater",   category:"Tops",       color:"#C0653A", pattern:"Knit",     style:["Classic","Casual"],    fit:"Regular", brand:"Aran"},
+  {id:"w6",  type:"Black Tapered Trousers", category:"Bottoms", color:"#1A1A1A", pattern:"Solid",    style:["Minimal","Formal"],    fit:"Tapered", brand:"Cos"},
+  {id:"w7",  type:"Olive Cargo Pants",   category:"Bottoms",    color:"#6B6B3F", pattern:"Solid",    style:["Streetwear","Utility"],fit:"Loose",   brand:"Carhartt"},
+  {id:"w8",  type:"Light Wash Jeans",    category:"Bottoms",    color:"#9DB4CB", pattern:"Washed",   style:["Casual","Streetwear"], fit:"Straight",brand:"Levi's"},
+  {id:"w9",  type:"White Leather Sneakers", category:"Shoes",   color:"#F2F0EA", pattern:"Solid",    style:["Minimal","Casual"],    fit:"Low-top", brand:"Common Projects"},
+  {id:"w10", type:"Chelsea Boots",       category:"Shoes",      color:"#3B2B20", pattern:"Solid",    style:["Formal","Classic"],    fit:"Ankle",   brand:"Blundstone"},
+  {id:"w11", type:"Black Beanie",        category:"Accessories",color:"#222222", pattern:"Ribbed",   style:["Streetwear","Casual"], fit:"Cuffed",  brand:"Carhartt"},
+  {id:"w12", type:"Tan Canvas Tote",     category:"Bags",       color:"#B08A4F", pattern:"Woven",    style:["Casual","Utility"],    fit:"Tote",    brand:"Muji"},
+  {id:"w13", type:"Gold Field Watch",    category:"Watches",    color:"#CBA870", pattern:"Solid",    style:["Classic","Minimal"],   fit:"38mm",    brand:"Timex"},
+  {id:"w14", type:"Silver Chain",        category:"Jewelry",    color:"#C0C4CC", pattern:"Solid",    style:["Streetwear","Minimal"],fit:"45cm",    brand:"Mejuri"},
+];
+
+const SLOTS = [
+  {id:"HAT",    label:"Hat",       glyph:"🧢", affinity:"Accessories", defZ:40, x:41, y:2,  w:18, h:13, hint:"cap / beanie"},
+  {id:"JEWELRY",label:"Jewelry",   glyph:"💍", affinity:"Jewelry",     defZ:45, x:41, y:17, w:18, h:11, hint:"chain / pendant"},
+  {id:"OUTER",  label:"Outerwear", glyph:"🧥", affinity:"Outerwear",   defZ:30, x:31, y:16, w:38, h:28, hint:"jacket / coat"},
+  {id:"TOP",    label:"Top",       glyph:"👕", affinity:"Tops",        defZ:20, x:34, y:22, w:32, h:24, hint:"tee / knit"},
+  {id:"WATCH",  label:"Watch",     glyph:"⌚", affinity:"Watches",     defZ:50, x:16, y:38, w:13, h:10, hint:"watch"},
+  {id:"BAG",    label:"Bag",       glyph:"👜", affinity:"Bags",        defZ:35, x:70, y:40, w:15, h:14, hint:"bag / tote"},
+  {id:"BOTTOM", label:"Bottoms",   glyph:"👖", affinity:"Bottoms",     defZ:10, x:35, y:48, w:30, h:26, hint:"pants / shorts"},
+  {id:"SHOES",  label:"Shoes",     glyph:"👟", affinity:"Shoes",       defZ:15, x:31, y:76, w:38, h:14, hint:"sneakers / boots"},
+];
+
+/* ── state ─────────────────────────────────────────────── */
+const state = {
+  placed: {},            // slotId -> {item, z}
+  selected: null,        // rail card id (tap-to-place)
+  filter: "All",
+  mutedPairs: new Set(), // suppressed clash pairs "a|b"
+};
+
+/* ── helpers ───────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const hexToRgb = h => { h = h.replace("#",""); return [0,2,4].map(i => parseInt(h.slice(i,i+2),16)); };
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2;
+  if(mx===mn) return [0,0,l];
+  const d=mx-mn, s=l>0.5? d/(2-mx-mn) : d/(mx+mn);
+  let h = mx===r ? ((g-b)/d+(g<b?6:0)) : mx===g ? (b-r)/d+2 : (r-g)/d+4;
+  return [h*60, s, l];
+}
+const itemHsl = it => { const [h,s,l]=rgbToHsl(...hexToRgb(it.color)); return {h,s,l}; };
+const isNeutral = it => { const {s,l}=itemHsl(it); return s<0.18 || l<0.12 || l>0.92; };
+const hueDist = (a,b) => { const d=Math.abs(a.h-b.h)%360; return Math.min(d,360-d); };
+const hueName = h => ["red","orange","yellow","olive/green","teal","blue","violet","magenta","red"][Math.round(h/40)%9];
+
+/* ── clash analysis (rule defined in OUTFIT_BUILDER.md §5) ── */
+function analyzeClashes(placedItems){
+  const warns=[];
+  const colored = placedItems.filter(it=>!isNeutral(it));
+  for(let i=0;i<colored.length;i++) for(let j=i+1;j<colored.length;j++){
+    const a=colored[i], b=colored[j];
+    const key=[a.id,b.id].sort().join("|");
+    if(state.mutedPairs.has(key)) continue;
+    const d=hueDist(itemHsl(a),itemHsl(b));
+    if(d>=25 && d<=65){
+      warns.push({sev:"warn", pairKey:key,
+        msg:`<b>${a.type}</b> + <b>${b.type}</b> — ${hueName(itemHsl(a).h)} and ${hueName(itemHsl(b).h)} sit only <b>${Math.round(d)}°</b> apart. Swap one for a neutral.`});
+    } else if(d>=150 && itemHsl(a).s>0.4 && itemHsl(b).s>0.4){
+      warns.push({sev:"warn", pairKey:key,
+        msg:`<b>${a.type}</b> + <b>${b.type}</b> — bold ${Math.round(d)}° contrast; works only if one side is muted.`});
+    }
+  }
+  const loud = placedItems.filter(it=>it.pattern!=="Solid");
+  if(loud.length>=2){
+    warns.push({sev:"warn", pairKey:null,
+      msg:`<b>${loud.length} patterns stack</b> (${loud.map(l=>l.pattern.toLowerCase()).join(", ")}). Keep it to one loud piece.`});
+  }
+  return warns;
+}
+
+/* ── style score (OUTFIT_BUILDER.md §6) ─────────────────── */
+const SLOT_WEIGHT = {TOP:8, BOTTOM:8, SHOES:6, OUTER:4, HAT:2, WATCH:1, BAG:1, JEWELRY:1};
+function analyzeScore(placed){
+  const items = Object.values(placed).map(p=>p.item);
+  if(items.length===0) return {total:0, grade:"Rework", parts:{Harmony:0,Completeness:0,Pattern:0,Cohesion:0}, clashCount:0};
+
+  // Harmony (40)
+  const warns = analyzeClashes(items);
+  const clashPairs = warns.filter(w=>w.pairKey).length;
+  let harmony = 40 - 12*clashPairs;
+  const hues = new Set(items.filter(it=>!isNeutral(it)).map(it=>Math.round(itemHsl(it).h/40)*40));
+  if(hues.size<=2 && items.some(it=>!isNeutral(it))) harmony += 4;
+  harmony = Math.max(0, Math.min(40, harmony));
+
+  // Completeness (30)
+  const got = Object.keys(placed).reduce((s,k)=>s+SLOT_WEIGHT[k]||s,0);
+  const completeness = Math.round(30*got/31);
+
+  // Pattern (15)
+  const nLoud = items.filter(it=>it.pattern!=="Solid").length;
+  const pattern = nLoud===0?12 : nLoud===1?15 : nLoud===2?6 : 3;
+
+  // Cohesion (15) — shared style tags with the "hero" (first Tops/Outer) item
+  const hero = items.find(it=>it.category==="Tops") || items.find(it=>it.category==="Outerwear") || items[0];
+  const matches = items.filter(it=>it!==hero && it.style.some(s=>hero.style.includes(s))).length;
+  const cohesion = items.length<=1 ? 15 : Math.round(15*matches/(items.length-1));
+
+  const total = Math.min(100, harmony+completeness+pattern+cohesion);
+  const grade = total>=85?"Fire 🔥" : total>=70?"Solid" : total>=50?"Decent" : "Rework";
+  return {total, grade, parts:{Harmony:harmony, Completeness:completeness, Pattern:pattern, Cohesion:cohesion}, clashCount:clashPairs};
+}
+
+/* ── render: rail ──────────────────────────────────────── */
+const CATS = ["All","Tops","Bottoms","Outerwear","Shoes","Accessories","Bags","Watches","Jewelry"];
+function renderFilters(){
+  $("filters").innerHTML = CATS.map(c=>
+    `<button class="chip ${state.filter===c?"active":""}" data-cat="${c}">${c}</button>`).join("");
+  $("filters").querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{state.filter=ch.dataset.cat; renderFilters(); renderRail();});
+}
+function renderRail(){
+  const list = WARDROBE.filter(w => (state.filter==="All"||w.category===state.filter));
+  const placedIds = new Set(Object.values(state.placed).map(p=>p.item.id));
+  $("railItems").innerHTML = list.map(w=>`
+    <div class="card ${placedIds.has(w.id)?"placed":""} ${state.selected===w.id?"selected":""}"
+         draggable="${!placedIds.has(w.id)}" data-id="${w.id}" title="${w.brand} · ${w.fit} · ${w.style.join(", ")}">
+      <div class="swatch" style="background:${w.color}${w.secondaryColor?`;background:repeating-linear-gradient(45deg,${w.color} 0 10px,${w.secondaryColor} 10px 20px)`:""}">${catGlyph(w.category)}</div>
+      <div class="name">${w.type}</div>
+      <div class="meta"><span class="pattern-dot" title="pattern" style="${w.pattern==="Solid"?"background:#D8CFBB":""}"></span>${w.pattern} · ${w.category}</div>
+    </div>`).join("") || `<div class="rail-empty">No items in this category.</div>`;
+  $("railItems").querySelectorAll(".card").forEach(card=>{
+    const item = WARDROBE.find(w=>w.id===card.dataset.id);
+    card.addEventListener("dragstart", e=>{ e.dataTransfer.setData("text/plain", item.id); e.dataTransfer.effectAllowed="copy"; });
+    card.addEventListener("click", ()=>{
+      state.selected = state.selected===item.id ? null : item.id;
+      renderRail();
+      if(state.selected) toast(`Selected “${item.type}” — tap a slot to place it`);
+    });
+  });
+}
+const catGlyph = c => ({Tops:"👕",Bottoms:"👖",Shoes:"👟",Outerwear:"🧥",Accessories:"🧢",Bags:"👜",Watches:"⌚",Jewelry:"💍"}[c]||"👕");
+
+/* ── render: canvas ────────────────────────────────────── */
+function buildSlots(){
+  SLOTS.forEach(s=>{
+    const el=document.createElement("div");
+    el.className="slot"; el.dataset.slot=s.id;
+    el.style.cssText=`left:${s.x}%;top:${s.y}%;width:${s.w}%;height:${s.h}%`;
+    el.innerHTML=`<span><span class="glyph">${s.glyph}</span>${s.label}<br><span style="font-weight:400;opacity:.7">${s.hint}</span></span>`;
+    $("canvas").appendChild(el);
+    bindDropZone(el, s);
+  });
+}
+function renderCanvas(){
+  document.querySelectorAll(".placed").forEach(p=>p.remove());
+  $("guide").style.display = Object.keys(state.placed).length ? "none":"grid";
+  Object.entries(state.placed).forEach(([slotId,p])=>{
+    const s = SLOTS.find(x=>x.id===slotId);
+    const el=document.createElement("div");
+    el.className="placed"; el.draggable=true; el.dataset.slot=slotId;
+    el.style.cssText=`left:${s.x+2}%;top:${s.y+4}%;width:${s.w-4}%;height:${s.h-9}%;z-index:${p.z};
+      background:linear-gradient(160deg,${p.item.color}33,${p.item.color}99); border-color:${p.item.color}`;
+    el.innerHTML=`<span class="ztag" title="layer z-index">${p.z}</span><span style="font-size:20px">${catGlyph(p.item.category)}</span><span style="max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.item.type}</span><span class="remove" title="remove">✕</span>`;
+    el.querySelector(".remove").addEventListener("click", e=>{ e.stopPropagation(); removeItem(slotId); });
+    el.addEventListener("dragstart", e=>{ e.dataTransfer.setData("text/plain","__move__:"+slotId); e.dataTransfer.effectAllowed="move"; });
+    el.addEventListener("click", ()=> toast(`${p.item.type} — z:${p.z} · reorder in Layer Stack →`));
+    $("canvas").appendChild(el);
+  });
+}
+function bindDropZone(el, s){
+  el.addEventListener("dragover", e=>{ e.preventDefault(); el.classList.add("drag-over"); });
+  el.addEventListener("dragleave", ()=> el.classList.remove("drag-over"));
+  el.addEventListener("drop", e=>{
+    e.preventDefault(); el.classList.remove("drag-over");
+    const data=e.dataTransfer.getData("text/plain");
+    if(data.startsWith("__move__:")){ moveItem(data.slice(8), s.id); return; }
+    placeItem(data, s.id);
+  });
+  // tap-to-place fallback
+  el.addEventListener("click", ()=>{
+    if(!state.selected) return;
+    placeItem(state.selected, s.id);
+    state.selected=null; renderRail();
+  });
+}
+const canvas = $("canvas");
+canvas.addEventListener("dragover", e=>e.preventDefault());
+canvas.addEventListener("drop", e=>{ // drop on empty canvas = remove
+  e.preventDefault();
+  const data=e.dataTransfer.getData("text/plain");
+  if(data.startsWith("__move__:")) removeItem(data.slice(8));
+});
+
+/* ── actions ───────────────────────────────────────────── */
+function placeItem(itemId, slotId){
+  const item = WARDROBE.find(w=>w.id===itemId); const slot = SLOTS.find(s=>s.id===slotId);
+  if(!item||!slot) return;
+  if(item.category!==slot.affinity){ toast(`⚠ ${item.category} can’t go on the ${slot.label} slot`); return; }
+  if(state.placed[slotId]){ // swap: return old to rail
+    toast(`Swapped — ${state.placed[slotId].item.type} is back in your wardrobe`);
+  }
+  state.placed[slotId]={item, z:slot.defZ};
+  refresh();
+  const sc=analyzeScore(state.placed);
+  toast(`✓ ${item.type} placed · score ${sc.total} (${sc.grade})`);
+}
+function moveItem(fromSlot, toSlot){
+  if(fromSlot===toSlot) return;
+  const fs=SLOTS.find(s=>s.id===fromSlot), ts=SLOTS.find(s=>s.id===toSlot);
+  const moving=state.placed[fromSlot]?.item;
+  if(!moving) return;
+  if(moving.category!==ts.affinity){ toast(`⚠ ${moving.category} can’t go on the ${ts.label} slot`); return; }
+  const old=state.placed[toSlot];
+  state.placed[toSlot]={item:moving, z:ts.defZ};
+  if(old) state.placed[fromSlot]={item:old.item, z:fs.defZ}; else delete state.placed[fromSlot];
+  refresh(); toast(`Moved ${moving.type} → ${ts.label}`);
+}
+function removeItem(slotId){
+  const p=state.placed[slotId]; if(!p) return;
+  delete state.placed[slotId]; refresh(); toast(`Removed ${p.item.type}`);
+}
+function setZ(slotId, dir){
+  const p=state.placed[slotId]; if(!p) return;
+  // rank-based adjacent swap: never produces z ties, always changes visible order
+  const ranked=Object.entries(state.placed).map(([k,x])=>[k,x.z]).sort((a,b)=>b[1]-a[1]); // front → back
+  const idx=ranked.findIndex(([k])=>k===slotId);
+  const neighbour=ranked[dir>0 ? idx-1 : idx+1];
+  if(!neighbour){ toast("Already at that end of the stack"); return; }
+  const other=state.placed[neighbour[0]];
+  const tmp=p.z; p.z=other.z; other.z=tmp;
+  refresh();
+}
+function refresh(){ renderCanvas(); renderRail(); renderInspector(); renderScore(); renderSaved(); persistSession(); }
+
+/* ── render: inspector ─────────────────────────────────── */
+function renderInspector(){
+  // layer stack (sorted front-to-back)
+  const entries=Object.entries(state.placed).sort((a,b)=>b[1].z-a[1].z);
+  $("layerEmpty").style.display=entries.length?"none":"block";
+  $("layerList").innerHTML=entries.map(([slotId,p],idx,arr)=>`
+    <li class="layer-item">
+      <span class="dot" style="background:${p.item.color}"></span> ${p.item.type}
+      <span class="cat">${SLOTS.find(s=>s.id===slotId).label} · z${p.z}</span>
+      <span class="mv">
+        <button ${idx===0?"disabled":""} data-act="up" data-slot="${slotId}" title="bring forward">▲</button>
+        <button ${idx===arr.length-1?"disabled":""} data-act="down" data-slot="${slotId}" title="send back">▼</button>
+      </span>
+    </li>`).join("");
+  $("layerList").querySelectorAll("button").forEach(b=>b.onclick=()=>setZ(b.dataset.slot, b.dataset.act==="up"?1:-1));
+
+  // color check
+  const items=Object.values(state.placed).map(p=>p.item);
+  const warns=analyzeClashes(items);
+  const neutrals=items.filter(isNeutral).length;
+  let html = warns.map(w=>`<div class="clash-row ${w.sev}"><span class="ic">⚠</span><span>${w.msg}</span>${w.pairKey?`<span class="mute" data-key="${w.pairKey}">keep it</span>`:""}</div>`).join("");
+  if(neutrals>=2) html+=`<div class="clash-row good"><span class="ic">✓</span><span><b>${neutrals} neutrals</b> anchor the palette — easy to build on.</span></div>`;
+  if(items.length && !warns.length) html+=`<div class="clash-row good"><span class="ic">✓</span><span>No hue clashes detected. Palette is clean.</span></div>`;
+  if(!items.length) html=`<div class="inspector-empty">Place items to run the color check.</div>`;
+  $("colorCheck").innerHTML=html;
+  $("colorCheck").querySelectorAll(".mute").forEach(m=>m.onclick=()=>{
+    state.mutedPairs.add(m.dataset.key); refresh(); toast("Clash muted — you do you ✌️");
+  });
+}
+
+/* ── render: score ─────────────────────────────────────── */
+function renderScore(){
+  const a=analyzeScore(state.placed);
+  const anim = n => { let cur=parseInt($("scoreNum").textContent)||0; const step=()=>{ cur+=Math.sign(n-cur)*Math.ceil(Math.abs(n-cur)/6||1); if((n-cur)*Math.sign(n-cur)>0){$("scoreNum").textContent=cur; requestAnimationFrame(step);} else $("scoreNum").textContent=n; }; step(); };
+  anim(a.total);
+  $("scoreNum").style.color = a.total>=85?"var(--warn)":a.total>=70?"var(--ok)":a.total>=50?"var(--muted)":"var(--bad)";
+  $("scoreGrade").textContent=a.grade;
+  $("scoreGrade").className="score-grade "+(a.total>=85?"grade-fire":a.total>=70?"grade-solid":a.total>=50?"grade-decent":"grade-rework");
+  $("scoreBars").innerHTML=Object.entries(a.parts).map(([k,v])=>{
+    const max={Harmony:40,Completeness:30,Pattern:15,Cohesion:15}[k];
+    return `<div class="bar-row"><span class="lbl">${k}</span><span class="bar"><i style="width:${100*v/max}%"></i></span><span class="val">${v}/${max}</span></div>`;
+  }).join("");
+}
+
+/* ── save / share ──────────────────────────────────────── */
+const LS_KEY="styledrop_saved_looks";
+function encodeLook(){
+  const payload=Object.entries(state.placed).map(([slotId,p])=>[slotId,p.item.id,p.z]);
+  return btoa(JSON.stringify(payload));
+}
+function decodeLook(code){
+  try{
+    const payload=JSON.parse(atob(code)); const np={};
+    payload.forEach(([slotId,itemId,z])=>{
+      const item=WARDROBE.find(w=>w.id===itemId), slot=SLOTS.find(s=>s.id===slotId);
+      if(item&&slot) np[slotId]={item,z:z??slot.defZ};
+    });
+    return Object.keys(np).length?np:null;
+  }catch(e){ return null; }
+}
+function persistSession(){ try{ localStorage.setItem("styledrop_builder_session", encodeLook()); }catch(e){} }
+function getSaved(){ try{ return JSON.parse(localStorage.getItem(LS_KEY))||[]; }catch(e){ return []; } }
+function renderSaved(){
+  const looks=getSaved();
+  $("savedCount").textContent = looks.length?`· ${looks.length}`:"";
+  $("savedStrip").innerHTML = looks.length ? looks.map(l=>`
+    <div class="saved-look" data-id="${l.id}" title="click to load">
+      <div class="thumb">${Object.values(l.slots).map(p=>catGlyph(p.item.category)).slice(0,4).join("")}</div>
+      <div class="nm">${l.name}</div><div class="sc">${l.score} · ${l.grade}</div>
+      <button class="del" data-del="${l.id}" title="delete">✕</button>
+    </div>`).join("")
+    : `<div class="inspector-empty" style="padding:4px 2px 10px">Nothing saved yet — build a look and hit Save.</div>`;
+  $("savedStrip").querySelectorAll(".saved-look").forEach(el=>{
+    el.addEventListener("click", e=>{
+      if(e.target.dataset.del){ return; }
+      const look=getSaved().find(l=>l.id===el.dataset.id);
+      if(look){ state.placed={}; Object.entries(look.slots).forEach(([k,p])=>{ const item=WARDROBE.find(w=>w.id===p.item.id); if(item) state.placed[k]={item,z:p.z}; }); refresh(); toast(`Loaded “${look.name}”`); }
+    });
+    el.querySelector(".del")?.addEventListener("click", e=>{
+      e.stopPropagation();
+      localStorage.setItem(LS_KEY, JSON.stringify(getSaved().filter(l=>l.id!==e.target.dataset.del)));
+      renderSaved(); toast("Look deleted");
+    });
+  });
+}
+$("btnSave").onclick=()=>{
+  if(!Object.keys(state.placed).length){ toast("Place at least one item first"); return; }
+  $("saveName").value=""; $("saveDlg").showModal(); $("saveName").focus();
+};
+$("saveCancel").onclick=()=>$("saveDlg").close();
+$("saveConfirm").onclick=()=>{
+  const name=$("saveName").value.trim()||("Look "+new Date().toLocaleDateString());
+  const a=analyzeScore(state.placed);
+  const looks=getSaved();
+  looks.unshift({id:Date.now().toString(36), name, score:a.total, grade:a.grade, slots:JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(state.placed))))});
+  localStorage.setItem(LS_KEY, JSON.stringify(looks));
+  $("saveDlg").close(); renderSaved(); toast(`Saved “${name}” · ${a.total} ${a.grade}`);
+};
+$("btnShare").onclick=()=>{
+  if(!Object.keys(state.placed).length){ toast("Place at least one item first"); return; }
+  $("shareOut").textContent = location.origin+location.pathname+"#look="+encodeLook();
+  $("shareDlg").showModal();
+};
+$("shareClose").onclick=()=>$("shareDlg").close();
+$("btnCopyLink").onclick=()=>{
+  navigator.clipboard?.writeText(location.origin+location.pathname+"#look="+encodeLook())
+    .then(()=>toast("Look link copied — open it to restore this exact canvas"))
+    .catch(()=>toast("Copy failed — use the Share dialog"));
+};
+$("btnClear").onclick=()=>{ state.placed={}; refresh(); toast("Canvas cleared"); };
+$("btnRandom").onclick=()=>{
+  state.placed={}; state.mutedPairs.clear();
+  const pick=(cat,slot)=>{ const pool=WARDROBE.filter(w=>w.category===cat); if(pool.length&&Math.random()<(slot==="OUTER"||slot==="HAT"||slot==="BAG"||slot==="WATCH"||slot==="JEWELRY"?0.6:1)) placeSilent(pool[Math.floor(Math.random()*pool.length)].id,slot); };
+  const placeSilent=(id,slot)=>{ const item=WARDROBE.find(w=>w.id===id), s=SLOTS.find(x=>x.id===slot); state.placed[slot]={item,z:s.defZ}; };
+  pick("Tops","TOP"); pick("Bottoms","BOTTOM"); pick("Shoes","SHOES"); pick("Outerwear","OUTER");
+  pick("Accessories","HAT"); pick("Bags","BAG"); pick("Watches","WATCH"); pick("Jewelry","JEWELRY");
+  refresh();
+  const a=analyzeScore(state.placed);
+  toast(`🎲 Stylist picked a look — ${a.total} ${a.grade}${a.clashCount?` (${a.clashCount} clash${a.clashCount>1?"es":""} to fix)`:" ✨"}`);
+};
+function toast(msg){
+  const t=$("toast"); t.innerHTML=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+/* ── boot ──────────────────────────────────────────────── */
+(function boot(){
+  buildSlots(); renderFilters(); renderScore(); renderInspector(); renderSaved();
+  // restore session or ?/# shared look
+  const m=location.hash.match(/#look=([^&]+)/);
+  if(m){ const np=decodeLook(m[1]); if(np){ state.placed=np; toast("Shared look loaded 🔗"); } }
+  else{
+    try{ const s=localStorage.getItem("styledrop_builder_session"); if(s){ const np=decodeLook(s); if(np) state.placed=np; } }catch(e){}
+  }
+  renderRail(); renderCanvas(); renderScore();
+  // enable copy once there is content
+  const enableCopy=()=>{ $("btnCopyLink").disabled=!Object.keys(state.placed).length; };
+  const _refresh=refresh; refresh=function(){ _refresh(); enableCopy(); }; enableCopy();
+})();
+</script>
+</body>
+</html>
